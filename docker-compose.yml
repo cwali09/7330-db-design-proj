@@ -1,5 +1,3 @@
-version: '3.8' # Use a recent version
-
 services:
   # Define the MySQL database service
   db:
@@ -18,7 +16,7 @@ services:
     volumes:
       # Persist database data even if the container is removed and recreated
       # Creates a named volume called 'mysql_data'
-      - mysql_data:/var/lib/mysql
+      # - mysql_data:/var/lib/mysql
       # Optional: Mount the schema file to initialize the DB on first run
       # Make sure the path db/schema.txt is correct relative to docker-compose.yml
       - ./db/schema.txt:/docker-entrypoint-initdb.d/schema.sql

@@ -1,5 +1,32 @@
 -- schema.txt (Revised with Comments Addressing Feedback)
 
+
+-- Complete Database Schema for Social Media Analysis Project
+-- Includes generated hashes for content/user/media uniqueness in POST
+-- and explicit character set/collation definitions.
+
+-- Ensure database uses UTF8MB4 for full character support
+-- CREATE DATABASE IF NOT EXISTS social_media_analysis CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+-- USE social_media_analysis;
+
+-- Drop tables in reverse order of dependency if recreating schema
+DROP VIEW IF EXISTS ANALYSIS_RESULTS_DETAIL;
+DROP VIEW IF EXISTS PROJECT_DETAILS;
+DROP VIEW IF EXISTS POST_DETAILS;
+DROP PROCEDURE IF EXISTS QueryExperiment;
+DROP PROCEDURE IF EXISTS QueryPosts;
+DROP TABLE IF EXISTS ANALYSIS_RESULT;
+DROP TABLE IF EXISTS PROJECT_POST;
+DROP TABLE IF EXISTS REPOST;
+DROP TABLE IF EXISTS FIELD;
+DROP TABLE IF EXISTS POST;
+DROP TABLE IF EXISTS PROJECT;
+DROP TABLE IF EXISTS USER_ACCOUNT;
+DROP TABLE IF EXISTS INSTITUTE;
+DROP TABLE IF EXISTS PROJECT_MANAGER;
+DROP TABLE IF EXISTS SOCIAL_MEDIA;
+
+
 -- Represents the social media platforms. Using name as PK aligns with the description [cite: 34]
 -- and simplifies joins where the platform name is known.
 CREATE TABLE SOCIAL_MEDIA (
@@ -51,26 +78,33 @@ CREATE TABLE PROJECT (
     CONSTRAINT check_project_dates CHECK (end_date >= start_date) -- [cite: 43]
 );
 
--- Represents individual posts.
 CREATE TABLE POST (
-    post_id INT AUTO_INCREMENT PRIMARY KEY, -- Surrogate key for unique post identification
-    content TEXT NOT NULL, -- Arbitrary length text [cite: 33]
-    post_time DATETIME NOT NULL, -- [cite: 36]
+    post_id INT AUTO_INCREMENT PRIMARY KEY,
+    content TEXT NOT NULL,
+    post_time DATETIME NOT NULL,
     username VARCHAR(40) NOT NULL,
     social_media_name VARCHAR(50) NOT NULL,
-    city VARCHAR(50),
+	city VARCHAR(50),
     state VARCHAR(50),
     country VARCHAR(50),
     likes INT DEFAULT 0,
     dislikes INT DEFAULT 0,
-    has_multimedia BOOLEAN DEFAULT FALSE, -- [cite: 39]
-    FOREIGN KEY (username, social_media_name) REFERENCES USER_ACCOUNT(username, social_media_name)
-        ON UPDATE CASCADE, -- Ensures post belongs to a valid user account
-    CONSTRAINT check_likes CHECK (likes >= 0), -- [cite: 39]
-    CONSTRAINT check_dislikes CHECK (dislikes >= 0), -- [cite: 39]
-    -- Ensures a user cannot post multiple times on the same platform at the exact same time [cite: 38]
-    CONSTRAINT unique_post_time UNIQUE (username, social_media_name, post_time)
+    has_multimedia BOOLEAN DEFAULT FALSE,
+	FOREIGN KEY (username, social_media_name) REFERENCES USER_ACCOUNT(username, social_media_name)
+    CONSTRAINT check_likes CHECK (likes >= 0),
+    CONSTRAINT check_dislikes CHECK (dislikes >= 0),
+    CONSTRAINT unique_post_by_time UNIQUE (username, social_media_name, post_time),
+    
+    content_hash CHAR(64) AS (HEX(SHA2(content, 256))) STORED NOT NULL,
+    username_hash CHAR(64) AS (HEX(SHA2(username, 256))) STORED NOT NULL,
+    social_media_name_hash CHAR(64) AS (HEX(SHA2(social_media_name, 256))) STORED NOT NULL,
+    CONSTRAINT unique_post_by_content_user_media UNIQUE (content_hash, username_hash, social_media_name_hash)
 );
+
+-- Optional indexes (the UNIQUE constraint already creates an index)
+CREATE INDEX idx_post_content_hash ON POST(content_hash);
+CREATE INDEX idx_post_username_hash ON POST(username_hash);
+CREATE INDEX idx_post_social_media_name_hash ON POST(social_media_name_hash);
 
 -- Represents fields defined for analysis within a project.
 -- Composite PK ensures field names are unique within a project[cite: 46].
