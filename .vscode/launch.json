@@ -32,12 +32,12 @@
       // URL the React development server runs on (usually 3000)
       "url": "http://localhost:3000",
       // Point to the frontend directory for source mapping
-      "webRoot": "${workspaceFolder}/frontend/source",
+      "webRoot": "${workspaceFolder}/frontend/src",
       // Optional: Specify user data directory for a clean browser instance
       // "userDataDir": "${workspaceFolder}/.vscode/chrome-debug-profile",
       "sourceMaps": true,
       "sourceMapPathOverrides": {
-        "webpack:///source/*": "${webRoot}/*"
+        "webpack:///src/*": "${webRoot}/*"
       }
     }
     // You can add more configurations, e.g., for attaching to an already running process
