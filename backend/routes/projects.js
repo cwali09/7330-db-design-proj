@@ -14,7 +14,6 @@ router.post('/', async (req, res, next) => {
     institute_name,
     manager_first_name,
     manager_last_name
-    // REMOVED: fields array is no longer expected here
   } = req.body;
 
   // Basic validation for project details
@@ -54,14 +53,12 @@ router.post('/', async (req, res, next) => {
     }
 
     // 3. Insert into PROJECT table
-    let projectId;
     try {
-        const [projectInsertResult] = await connection.query(
+        // Execute the insert query
+        await connection.query(
           'INSERT INTO PROJECT (name, start_date, end_date, institute_name, manager_id) VALUES (?, ?, ?, ?, ?)',
           [name, start_date, end_date, institute_name, manager_id]
         );
-        var res = await connection.commit();
-        projectId = projectInsertResult.insertId;
     } catch (projectInsertError) {
          if (projectInsertError.code === 'ER_DUP_ENTRY') {
              await connection.rollback();
@@ -70,20 +67,18 @@ router.post('/', async (req, res, next) => {
          throw projectInsertError; // Re-throw other errors
     }
 
-    // REMOVED: Field insertion logic is moved to a separate route
-
     await connection.commit(); // Commit transaction
 
-    console.log(`Project '${name}' (ID: ${projectId}) created successfully.`);
+    console.log(`Project '${name}' created successfully.`);
     res.status(201).json({
         message: 'Project created successfully',
-        data: { projectId, name, start_date, end_date, institute_name, manager_id }
+        data: { name, start_date, end_date, institute_name, manager_id }
     });
 
   } catch (err) {
     console.error("Error during project creation transaction:", err);
     if (connection) await connection.rollback();
-    res.status(500).json({ message: `Internal server error during project creation: ${err.message}` });
+    res.status(500).json({ message: `Internal server error during project creation: ${err.message || 'Unknown error'}` });
   } finally {
     if (connection) connection.release();
   }
@@ -102,9 +97,9 @@ router.post('/:projectName/fields', async (req, res, next) => {
         return res.status(400).json({ message: 'Fields data must be a non-empty array.' });
     }
     // Validate individual fields
-    const validFields = fields.filter(f => f && typeof f.field_name === 'string' && f.field_name.trim() !== '');
+    const validFields = fields.filter(f => f && typeof f.field_name === 'string' && f.field_name.trim() !== '' && f.field_name.length <= 100); // Added length check from schema
     if (validFields.length === 0) {
-        return res.status(400).json({ message: 'No valid fields provided (missing or empty field_name).' });
+        return res.status(400).json({ message: 'No valid fields provided (missing, empty, or too long field_name).' });
     }
     if (validFields.length !== fields.length) {
         console.warn(`Request for project '${projectName}' contained invalid field entries which were ignored.`);
@@ -120,22 +115,20 @@ router.post('/:projectName/fields', async (req, res, next) => {
         connection = await db.getConnection();
         await connection.beginTransaction();
 
-        // 1. Find the project_id for the given projectName
-        const [projects] = await connection.query('SELECT project_id FROM PROJECT WHERE name = ?', [projectName]);
+        // 1. Check if the project exists (using PROJECT.name as FK target)
+        const [projects] = await connection.query('SELECT name FROM PROJECT WHERE name = ? LIMIT 1', [projectName]);
         if (projects.length === 0) {
             await connection.rollback();
             return res.status(404).json({ message: `Project '${projectName}' not found.` });
         }
-        const projectId = projects[0].project_id;
 
-        // 2. Prepare bulk insert for PROJECT_FIELD
-        // Use INSERT IGNORE or handle duplicates explicitly if needed
-        // Using INSERT IGNORE is simpler if overwriting is not desired
-        const fieldInsertSql = 'INSERT IGNORE INTO PROJECT_FIELD (project_id, field_name, description) VALUES ?';
+        // 2. Prepare bulk insert for FIELD table
+        // Schema: FIELD(field_name VARCHAR(100), project_name VARCHAR(100), description TEXT, PRIMARY KEY (field_name, project_name))
+        const fieldInsertSql = 'INSERT INTO FIELD (project_name, field_name, description) VALUES ?'; // Corrected table name
         const fieldValues = validFields.map(field => [
-            projectId,
+            projectName,
             field.field_name.trim(),
-            field.description || null
+            field.description || null // Description is TEXT, allows null
         ]);
 
         // Execute bulk insert
@@ -146,7 +139,7 @@ router.post('/:projectName/fields', async (req, res, next) => {
         const createdCount = result.affectedRows;
         const ignoredCount = validFields.length - createdCount;
 
-        console.log(`Added ${createdCount} new fields to project '${projectName}' (ID: ${projectId}). ${ignoredCount} fields might have already existed.`);
+        console.log(`Added ${createdCount} new fields to project '${projectName}'. ${ignoredCount} fields might have already existed.`);
         res.status(201).json({
             message: `Successfully processed fields for project '${projectName}'. ${createdCount} new fields added. ${ignoredCount > 0 ? `${ignoredCount} duplicates ignored.` : ''}`,
             createdCount: createdCount,
@@ -157,7 +150,18 @@ router.post('/:projectName/fields', async (req, res, next) => {
     } catch (err) {
         console.error(`Error adding fields to project ${projectName}:`, err);
         if (connection) await connection.rollback();
-        // Specific error handling (like FK constraints) might not be needed here unless PROJECT_FIELD has FKs other than project_id
+        // Check if the error is because FIELD.project_name doesn't exist or isn't a FK target
+        if (err.code === 'ER_BAD_FIELD_ERROR' && err.message.includes('project_name')) {
+             // This might indicate a schema mismatch if the column name is wrong in the query
+             return res.status(500).json({ message: `Database schema error: FIELD table might be missing the 'project_name' column or it's not correctly defined. Error: ${err.sqlMessage}` });
+        }
+        if (err.code === 'ER_NO_REFERENCED_ROW_2') { // Foreign key constraint fail (likely PROJECT.name)
+             return res.status(404).json({ message: `Project '${projectName}' not found (foreign key constraint failed when inserting into FIELD).` });
+        }
+        // Handle other potential errors like data too long for field_name
+         if (err.code === 'ER_DATA_TOO_LONG' && err.message.includes('field_name')) {
+             return res.status(400).json({ message: `One or more field names exceed the maximum length of 100 characters.` });
+         }
         next(err); // Pass other errors to the global error handler
     } finally {
         if (connection) connection.release();
@@ -188,25 +192,24 @@ router.post('/:projectName/posts', async (req, res, next) => {
     connection = await db.getConnection();
     await connection.beginTransaction();
 
-    // 1. Find the project_id for the given projectName
-    const [projects] = await connection.query('SELECT project_id FROM PROJECT WHERE name = ?', [projectName]);
+    // 1. Check if the project exists
+    const [projects] = await connection.query('SELECT name FROM PROJECT WHERE name = ? LIMIT 1', [projectName]);
     if (projects.length === 0) {
       await connection.rollback();
       return res.status(404).json({ message: `Project '${projectName}' not found.` });
     }
-    const projectId = projects[0].project_id;
 
     // 2. Prepare bulk insert for PROJECT_POST association
-    // Use INSERT IGNORE to avoid errors if an association already exists
-    const associationSql = 'INSERT IGNORE INTO PROJECT_POST (project_id, post_id) VALUES ?';
-    const associationValues = validPostIds.map(postId => [projectId, postId]);
+    // Schema: PROJECT_POST(project_name VARCHAR(100), post_id INT, PRIMARY KEY (project_name, post_id))
+    const associationSql = 'INSERT IGNORE INTO PROJECT_POST (project_name, post_id) VALUES ?';
+    const associationValues = validPostIds.map(postId => [projectName, postId]);
 
     // Execute bulk insert
     const [result] = await connection.query(associationSql, [associationValues]);
 
     await connection.commit();
 
-    console.log(`Associated ${result.affectedRows} new posts with project '${projectName}' (ID: ${projectId}). ${validPostIds.length - result.affectedRows} associations might have already existed.`);
+    console.log(`Associated ${result.affectedRows} new posts with project '${projectName}'. ${validPostIds.length - result.affectedRows} associations might have already existed.`);
     res.status(200).json({
         message: `Successfully processed associations for project '${projectName}'. ${result.affectedRows} new associations created.`,
         newAssociations: result.affectedRows,
@@ -217,9 +220,20 @@ router.post('/:projectName/posts', async (req, res, next) => {
     console.error(`Error associating posts with project ${projectName}:`, err);
     if (connection) await connection.rollback();
 
-    // Handle potential FK errors if a post_id doesn't exist in the POST table
-    if (err.code === 'ER_NO_REFERENCED_ROW_2' && err.message.includes('fk_projectpost_post')) { // Check your actual FK name
-         return res.status(400).json({ message: `One or more provided Post IDs do not exist in the database.` });
+    // Check specific errors related to this operation
+    if (err.code === 'ER_BAD_FIELD_ERROR' && err.message.includes('project_name')) {
+         return res.status(500).json({ message: "Database schema error: PROJECT_POST table might be missing the 'project_name' column or it's not correctly defined." });
+    }
+    // Handle potential FK errors if a post_id doesn't exist in the POST table OR if project_name FK fails
+    if (err.code === 'ER_NO_REFERENCED_ROW_2') {
+        // Check your actual FK names from schema.txt if needed for more specific errors
+        // Example: CONSTRAINT `project_post_ibfk_1` FOREIGN KEY (`project_name`) REFERENCES `PROJECT` (`name`)
+        // Example: CONSTRAINT `project_post_ibfk_2` FOREIGN KEY (`post_id`) REFERENCES `POST` (`post_id`)
+        if (err.message.includes('FOREIGN KEY (`post_id`)')) { // Check if error relates to post_id FK
+             return res.status(400).json({ message: `One or more provided Post IDs do not exist in the database.` });
+        } else { // Assume it's the project_name FK failing
+             return res.status(404).json({ message: `Project '${projectName}' not found (foreign key constraint failed).` });
+        }
     }
 
     next(err); // Pass other errors to the global error handler
@@ -268,6 +282,15 @@ router.get('/:projectName/experiment', async (req, res, next) => {
 
     } catch (err) {
         console.error(`Error calling QueryExperimentData procedure for project ${projectName}:`, err);
+        // Check if the error indicates the procedure doesn't exist or has wrong parameters
+        if (err.code === 'ER_SP_DOES_NOT_EXIST') {
+             return res.status(500).json({ message: "Stored procedure 'QueryExperimentData' not found." });
+        }
+        if (err.code === 'ER_SP_WRONG_NO_OF_ARGS') {
+             return res.status(500).json({ message: "Stored procedure 'QueryExperimentData' called with incorrect number of arguments." });
+        }
+        // Handle errors potentially thrown *by* the procedure if it encounters issues
+        // (These might be generic SQL errors or custom signaled errors)
         res.status(500).json({ message: `Error querying experiment data: ${err.message}` });
     } finally {
         if (connection) {
