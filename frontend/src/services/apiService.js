@@ -35,6 +35,12 @@ const addProjectField = (projectName, fieldData) => {
   return apiClient.post(`/projects/${encodedProjectName}/fields`, fieldData);
 };
 
+// --- Post Endpoints ---
+const createPost = (postData) => {
+    // postData should be { social_media_name, username, content, post_date }
+    return apiClient.post('/posts', postData);
+};
+
 // --- Post Query Endpoint ---
 const queryPosts = (criteria) => {
   // Remove empty criteria before sending
@@ -54,13 +60,13 @@ const queryExperiment = (projectName) => {
   return apiClient.get(`/experiments/${encodedProjectName}`);
 };
 
-
 // Export functions
 const apiService = {
   createProject,
   associatePosts,
   addProjectField,
   addAnalysisResult,
+  createPost,
   queryPosts,
   queryExperiment,
 };

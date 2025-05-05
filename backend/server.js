@@ -26,7 +26,7 @@ app.get('/', (req, res) => {
 // Global error handler (basic example)
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).send('Something broke!');
+  res.status(500).json({ message: 'Something went wrong!', error: err.message });
 });
 
 // Start the server

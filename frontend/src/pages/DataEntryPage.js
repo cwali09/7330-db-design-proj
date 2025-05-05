@@ -31,6 +31,15 @@ function DataEntryPage() {
       description: ''
   });
 
+  // --- State for New Post Entry (Corrected) ---
+  const [newPostData, setNewPostData] = useState({
+      social_media_name: '', // Changed from platform
+      username: '',          // Added
+      content: '',
+      post_date: '',         // Consider using a date picker input type="date"
+      // Removed author_id
+  });
+
   const [message, setMessage] = useState(''); // For feedback
 
   // --- Handlers ---
@@ -111,6 +120,31 @@ function DataEntryPage() {
        }
    };
 
+   // Handler for New Post form changes
+   const handleNewPostChange = (e) => {
+       setNewPostData({ ...newPostData, [e.target.name]: e.target.value });
+   };
+
+   // Handler for New Post form submission (Corrected)
+   const handleNewPostSubmit = async (e) => {
+       e.preventDefault();
+       setMessage('Creating new post...');
+       // Validate required fields based on the corrected state
+       if (!newPostData.social_media_name || !newPostData.username || !newPostData.content || !newPostData.post_date) {
+           setMessage('Please fill in Social Media Name, Username, Content, and Post Date for the new post.');
+           return;
+       }
+       try {
+           // Send the corrected data structure
+           const response = await apiService.createPost(newPostData);
+           setMessage(`New post created successfully with ID: ${response.data.data.post_id} (Backend response: ${response.data.message})`);
+           // Clear the form using the corrected state structure
+           setNewPostData({ social_media_name: '', username: '', content: '', post_date: '' });
+       } catch (error) {
+           setMessage(`Error creating post: ${error.response?.data?.message || error.message}`);
+       }
+   };
+
   return (
     <div>
       <h2>Data Entry</h2>
@@ -144,6 +178,31 @@ function DataEntryPage() {
           <input type="text" id="manager_last_name" name="manager_last_name" value={projectData.manager_last_name} onChange={handleProjectChange} required />
         </div>
         <button type="submit">Create Project</button>
+      </form>
+
+      {/* --- New Post Entry Form (Corrected) --- */}
+      <form onSubmit={handleNewPostSubmit}>
+          <h3>Create New Post</h3>
+          <div className="form-group">
+              <label htmlFor="social_media_name">Social Media Name:</label>
+              {/* You might want a dropdown if you have a fixed list of platforms */}
+              <input type="text" id="social_media_name" name="social_media_name" value={newPostData.social_media_name} onChange={handleNewPostChange} required />
+          </div>
+           <div className="form-group">
+              <label htmlFor="username">Username:</label>
+              <input type="text" id="username" name="username" value={newPostData.username} onChange={handleNewPostChange} maxLength="40" required />
+          </div>
+          <div className="form-group">
+              <label htmlFor="content">Content:</label>
+              <textarea id="content" name="content" value={newPostData.content} onChange={handleNewPostChange} required></textarea>
+          </div>
+          <div className="form-group">
+              <label htmlFor="post_date">Post Date:</label>
+              {/* Use type="date" for better UX, ensure backend handles YYYY-MM-DD */}
+              <input type="date" id="post_date" name="post_date" value={newPostData.post_date} onChange={handleNewPostChange} required />
+          </div>
+          {/* Removed Author ID input */}
+          <button type="submit">Create Post</button>
       </form>
 
       {/* --- Post Association Form --- */}
