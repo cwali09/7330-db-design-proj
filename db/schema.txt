@@ -95,9 +95,9 @@ CREATE TABLE POST (
     CONSTRAINT check_dislikes CHECK (dislikes >= 0),
     CONSTRAINT unique_post_by_time UNIQUE (username, social_media_name, post_time),
     
-    content_hash CHAR(64) AS (HEX(SHA2(content, 256))) STORED NOT NULL,
-    username_hash CHAR(64) AS (HEX(SHA2(username, 256))) STORED NOT NULL,
-    social_media_name_hash CHAR(64) AS (HEX(SHA2(social_media_name, 256))) STORED NOT NULL,
+    content_hash CHAR(128) AS (HEX(SHA2(content, 256))) STORED NOT NULL,
+    username_hash CHAR(128) AS (HEX(SHA2(username, 256))) STORED NOT NULL,
+    social_media_name_hash CHAR(128) AS (HEX(SHA2(social_media_name, 256))) STORED NOT NULL,
     CONSTRAINT unique_post_by_content_user_media UNIQUE (content_hash, username_hash, social_media_name_hash)
 );
 
