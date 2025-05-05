@@ -90,7 +90,7 @@ CREATE TABLE POST (
     likes INT DEFAULT 0,
     dislikes INT DEFAULT 0,
     has_multimedia BOOLEAN DEFAULT FALSE,
-	FOREIGN KEY (username, social_media_name) REFERENCES USER_ACCOUNT(username, social_media_name)
+	FOREIGN KEY (username, social_media_name) REFERENCES USER_ACCOUNT(username, social_media_name),
     CONSTRAINT check_likes CHECK (likes >= 0),
     CONSTRAINT check_dislikes CHECK (dislikes >= 0),
     CONSTRAINT unique_post_by_time UNIQUE (username, social_media_name, post_time),
