@@ -24,6 +24,13 @@ function DataEntryPage() {
     value: '',
   });
 
+  // --- State for Field Entry ---
+  const [fieldProjectName, setFieldProjectName] = useState('');
+  const [fieldData, setFieldData] = useState({
+      field_name: '',
+      description: ''
+  });
+
   const [message, setMessage] = useState(''); // For feedback
 
   // --- Handlers ---
@@ -83,6 +90,26 @@ function DataEntryPage() {
      }
    };
 
+   const handleFieldChange = (e) => {
+       setFieldData({ ...fieldData, [e.target.name]: e.target.value });
+   };
+
+   const handleFieldSubmit = async (e) => {
+       e.preventDefault();
+       setMessage('Adding field...');
+       if (!fieldProjectName || !fieldData.field_name) {
+           setMessage('Please enter a project name and field name.');
+           return;
+       }
+       try {
+           const response = await apiService.addProjectField(fieldProjectName, fieldData);
+           setMessage(`Field added/verified for project '${fieldProjectName}' (Backend response: ${response.data.message})`);
+           setFieldData({ field_name: '', description: '' }); // Clear field form
+           // Keep fieldProjectName potentially for multiple entries
+       } catch (error) {
+           setMessage(`Error adding field: ${error.response?.data?.message || error.message}`);
+       }
+   };
 
   return (
     <div>
@@ -131,6 +158,24 @@ function DataEntryPage() {
           <input type="text" id="assocPostIds" value={assocPostIds} onChange={(e) => setAssocPostIds(e.target.value)} required />
         </div>
          <button type="submit">Associate Posts</button>
+      </form>
+
+      {/* --- Field Entry Form --- */}
+      <form onSubmit={handleFieldSubmit}>
+          <h3>Add Analysis Field to Project</h3>
+          <div className="form-group">
+              <label htmlFor="fieldProjectName">Project Name:</label>
+              <input type="text" id="fieldProjectName" value={fieldProjectName} onChange={(e) => setFieldProjectName(e.target.value)} required />
+          </div>
+          <div className="form-group">
+              <label htmlFor="field_name">Field Name:</label>
+              <input type="text" id="field_name" name="field_name" value={fieldData.field_name} onChange={handleFieldChange} required />
+          </div>
+          <div className="form-group">
+              <label htmlFor="description">Field Description (Optional):</label>
+              <textarea id="description" name="description" value={fieldData.description} onChange={handleFieldChange}></textarea>
+          </div>
+          <button type="submit">Add Field</button>
       </form>
 
       {/* --- Analysis Result Entry Form --- */}

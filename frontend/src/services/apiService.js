@@ -29,6 +29,12 @@ const addAnalysisResult = (projectName, resultData) => {
   return apiClient.post(`/projects/${encodedProjectName}/results`, resultData);
 };
 
+const addProjectField = (projectName, fieldData) => {
+  const encodedProjectName = encodeURIComponent(projectName);
+  // fieldData should be { field_name: '...', description: '...' }
+  return apiClient.post(`/projects/${encodedProjectName}/fields`, fieldData);
+};
+
 // --- Post Query Endpoint ---
 const queryPosts = (criteria) => {
   // Remove empty criteria before sending
@@ -53,6 +59,7 @@ const queryExperiment = (projectName) => {
 const apiService = {
   createProject,
   associatePosts,
+  addProjectField,
   addAnalysisResult,
   queryPosts,
   queryExperiment,
