@@ -10,7 +10,7 @@ const app = express();
 const PORT = process.env.API_PORT || 3001;
 
 // Middleware
-app.use(cors()); // Enable CORS for all origins (adjust for production)
+app.use(cors()); // Enable CORS for all origins (adjust for production if needed)
 app.use(express.json()); // Parse JSON request bodies
 
 // API Routes
