@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import apiService from '../services/apiService'; // Create this service file
 
 // Basic inline styles for tabs (consider moving to a CSS file for larger apps)
@@ -49,9 +49,15 @@ function DataEntryPage() {
   // --- State for New Social Media Platform Entry ---
   const [newPlatformName, setNewPlatformName] = useState('');
 
+  // --- State for Existing Social Media Platforms (for dropdowns) ---
+  const [platforms, setPlatforms] = useState([]);
+  const [platformsLoading, setPlatformsLoading] = useState(true);
+  const [platformsError, setPlatformsError] = useState(null);
+
+
   // --- State for New User Account Entry ---
   const [newUserAccountData, setNewUserAccountData] = useState({
-      social_media_name: '',
+      social_media_name: '', // Will be populated from dropdown
       username: '',
       first_name: '',
       last_name: '',
@@ -59,7 +65,7 @@ function DataEntryPage() {
       country_residence: '',
       age: '',
       gender: '',
-      verified: false // Default to false
+      verified: false
   });
 
   // --- State for Post Association ---
@@ -81,16 +87,48 @@ function DataEntryPage() {
       description: ''
   });
 
-  // --- State for New Post Entry (Corrected) ---
+  // --- State for New Post Entry ---
   const [newPostData, setNewPostData] = useState({
-      social_media_name: '', // Changed from platform
-      username: '',          // Added
+      social_media_name: '', // Will be populated from dropdown
+      username: '',
       content: '',
-      post_date: '',         // Consider using a date picker input type="date"
-      // Removed author_id
+      post_date: '',
   });
 
   const [message, setMessage] = useState(''); // For feedback
+
+  // --- Fetch Existing Platforms on Mount ---
+  useEffect(() => {
+      const fetchPlatforms = async () => {
+          try {
+              setPlatformsLoading(true);
+              setPlatformsError(null);
+              const response = await apiService.getSocialMediaPlatforms();
+              // Ensure the response data is an array before setting state
+              if (Array.isArray(response.data)) {
+                  setPlatforms(response.data);
+                  // Set default selection for forms if platforms exist
+                  if (response.data.length > 0) {
+                      setNewUserAccountData(prev => ({ ...prev, social_media_name: response.data[0].name }));
+                      setNewPostData(prev => ({ ...prev, social_media_name: response.data[0].name }));
+                  }
+              } else {
+                  console.error("Received non-array data for platforms:", response.data);
+                  setPlatformsError("Received invalid data format for platforms.");
+                  setPlatforms([]); // Set to empty array on error
+              }
+          } catch (error) {
+              console.error("Error fetching platforms:", error);
+              setPlatformsError(`Error fetching platforms: ${error.response?.data?.message || error.message}`);
+              setPlatforms([]); // Set to empty array on error
+          } finally {
+              setPlatformsLoading(false);
+          }
+      };
+
+      fetchPlatforms();
+  }, []); // Empty dependency array means this runs once on mount
+
 
   // --- Handlers ---
   const handleProjectChange = (e) => {
@@ -103,7 +141,6 @@ function DataEntryPage() {
     try {
       const response = await apiService.createProject(projectData);
       setMessage(`Project '${response.data.data.name}' created successfully (Backend response: ${response.data.message})`);
-      // Clear form or provide other feedback
       setProjectData({ name: '', start_date: '', end_date: '', institute_name: '', manager_first_name: '', manager_last_name: '' });
     } catch (error) {
       setMessage(`Error creating project: ${error.response?.data?.message || error.message}`);
@@ -128,7 +165,18 @@ function DataEntryPage() {
           const response = await apiService.createSocialMediaPlatform(platformData);
           setMessage(`Social media platform '${response.data.data.name}' created successfully.`);
           setNewPlatformName(''); // Clear the form
-          // Optional: You could refetch the list of platforms here if needed elsewhere
+          // Refetch platforms to update dropdowns
+          const updatedPlatforms = await apiService.getSocialMediaPlatforms();
+          if (Array.isArray(updatedPlatforms.data)) {
+             setPlatforms(updatedPlatforms.data);
+             // Optionally reset default selection if needed
+             if (updatedPlatforms.data.length > 0 && !platforms.some(p => p.name === newUserAccountData.social_media_name)) {
+                 setNewUserAccountData(prev => ({ ...prev, social_media_name: updatedPlatforms.data[0].name }));
+             }
+             if (updatedPlatforms.data.length > 0 && !platforms.some(p => p.name === newPostData.social_media_name)) {
+                 setNewPostData(prev => ({ ...prev, social_media_name: updatedPlatforms.data[0].name }));
+             }
+          }
       } catch (error) {
           setMessage(`Error creating platform: ${error.response?.data?.message || error.message}`);
       }
@@ -147,110 +195,157 @@ function DataEntryPage() {
   const handleNewUserAccountSubmit = async (e) => {
       e.preventDefault();
       setMessage('Creating user account...');
-      if (!newUserAccountData.social_media_name || !newUserAccountData.username) {
-          setMessage('Please fill in Social Media Name and Username.');
+      // Basic validation (ensure platform is selected)
+      if (!newUserAccountData.social_media_name) {
+          setMessage('Please select a social media platform.');
+          return;
+      }
+      if (!newUserAccountData.username || newUserAccountData.username.trim() === '') {
+          setMessage('Please enter a username.');
           return;
       }
       try {
-          // Prepare data, ensuring age is a number or null
+          // Prepare data, converting age to number if present
           const dataToSend = {
               ...newUserAccountData,
               age: newUserAccountData.age ? parseInt(newUserAccountData.age) : null
           };
           const response = await apiService.createUserAccount(dataToSend);
           setMessage(`User account '${response.data.data.username}' on '${response.data.data.social_media_name}' created successfully.`);
-          // Clear the form
+          // Clear form, keeping platform selection or resetting to default
           setNewUserAccountData({
-              social_media_name: '', username: '', first_name: '', last_name: '',
-              country_birth: '', country_residence: '', age: '', gender: '', verified: false
+              social_media_name: platforms.length > 0 ? platforms[0].name : '', // Reset to default or empty
+              username: '',
+              first_name: '',
+              last_name: '',
+              country_birth: '',
+              country_residence: '',
+              age: '',
+              gender: '',
+              verified: false
           });
       } catch (error) {
           setMessage(`Error creating user account: ${error.response?.data?.message || error.message}`);
       }
   };
 
+  // Handler for New Post form changes
   const handleNewPostChange = (e) => {
       setNewPostData({ ...newPostData, [e.target.name]: e.target.value });
   };
 
+  // Handler for New Post form submission (Corrected)
   const handleNewPostSubmit = async (e) => {
       e.preventDefault();
       setMessage('Creating new post...');
       // Validate required fields based on the corrected state
-      if (!newPostData.social_media_name || !newPostData.username || !newPostData.content || !newPostData.post_date) {
-          setMessage('Please fill in Social Media Name, Username, Content, and Post Date for the new post.');
+      if (!newPostData.social_media_name) {
+          setMessage('Please select a social media platform for the new post.');
+          return;
+      }
+      if (!newPostData.username || !newPostData.content || !newPostData.post_date) {
+          setMessage('Please fill in Username, Content, and Post Date for the new post.');
           return;
       }
       try {
           // Send the corrected data structure
           const response = await apiService.createPost(newPostData);
           setMessage(`New post created successfully with ID: ${response.data.data.post_id} (Backend response: ${response.data.message})`);
-          // Clear the form using the corrected state structure
-          setNewPostData({ social_media_name: '', username: '', content: '', post_date: '' });
+          // Clear the form using the corrected state structure, keeping platform selection or resetting
+          setNewPostData({
+              social_media_name: platforms.length > 0 ? platforms[0].name : '', // Reset to default or empty
+              username: '',
+              content: '',
+              post_date: ''
+          });
       } catch (error) {
           setMessage(`Error creating post: ${error.response?.data?.message || error.message}`);
       }
   };
 
-  const handleAssociationSubmit = async (e) => {
-     e.preventDefault();
-     setMessage('Associating posts...');
-     const postIdsArray = assocPostIds.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id));
-     if (!assocProjectName || postIdsArray.length === 0) {
-         setMessage('Please enter a project name and valid, comma-separated post IDs.');
-         return;
-     }
-     try {
-         const response = await apiService.associatePosts(assocProjectName, postIdsArray);
-         setMessage(`Posts associated with project '${assocProjectName}' (Backend response: ${response.data.message})`);
-         setAssocProjectName('');
-         setAssocPostIds('');
-     } catch (error) {
-         setMessage(`Error associating posts: ${error.response?.data?.message || error.message}`);
-     }
+  // Handler for Post Association form changes
+  const handleAssociationChange = (e) => {
+    if (e.target.name === 'assocProjectName') {
+      setAssocProjectName(e.target.value);
+    } else if (e.target.name === 'assocPostIds') {
+      setAssocPostIds(e.target.value);
+    }
   };
 
+  // Handler for Post Association form submission
+  const handleAssociationSubmit = async (e) => {
+    e.preventDefault();
+    setMessage('Associating posts...');
+    if (!assocProjectName || !assocPostIds) {
+      setMessage('Please provide both Project Name and Post IDs.');
+      return;
+    }
+    // Basic validation for comma-separated IDs (numbers)
+    const postIdsArray = assocPostIds.split(',').map(id => id.trim()).filter(id => id !== '');
+    if (postIdsArray.some(id => isNaN(parseInt(id)))) {
+        setMessage('Invalid Post IDs format. Please provide comma-separated numbers.');
+        return;
+    }
+
+    try {
+      const response = await apiService.associatePosts(assocProjectName, postIdsArray);
+      setMessage(`Posts associated successfully with project '${assocProjectName}' (Backend response: ${response.data.message})`);
+      setAssocProjectName('');
+      setAssocPostIds('');
+    } catch (error) {
+      setMessage(`Error associating posts: ${error.response?.data?.message || error.message}`);
+    }
+  };
+
+  // Handler for Field Entry form changes
   const handleFieldChange = (e) => {
       setFieldData({ ...fieldData, [e.target.name]: e.target.value });
   };
 
+  // Handler for Field Entry form submission
   const handleFieldSubmit = async (e) => {
       e.preventDefault();
-      setMessage('Adding project field...');
+      setMessage('Adding analysis field...');
       if (!fieldProjectName || !fieldData.field_name) {
-          setMessage('Please provide a project name and a field name.');
+          setMessage('Please provide both Project Name and Field Name.');
           return;
       }
       try {
           const response = await apiService.addProjectField(fieldProjectName, fieldData);
-          setMessage(`Field '${fieldData.field_name}' added to project '${fieldProjectName}' (Backend response: ${response.data.message})`);
-          // Keep project name, clear field data
+          setMessage(`Field '${response.data.data.field_name}' added successfully to project '${fieldProjectName}'.`);
+          setFieldProjectName('');
           setFieldData({ field_name: '', description: '' });
       } catch (error) {
           setMessage(`Error adding field: ${error.response?.data?.message || error.message}`);
       }
   };
 
-   const handleResultChange = (e) => {
-     setResultData({ ...resultData, [e.target.name]: e.target.value });
-   };
+  // Handler for Analysis Result form changes
+  const handleResultChange = (e) => {
+      setResultData({ ...resultData, [e.target.name]: e.target.value });
+  };
 
-   const handleResultSubmit = async (e) => {
-     e.preventDefault();
-     setMessage('Submitting analysis result...');
-      if (!resultProjectName || !resultData.postId || !resultData.fieldName || resultData.value === '') {
+  // Handler for Analysis Result form submission
+  const handleResultSubmit = async (e) => {
+      e.preventDefault();
+      setMessage('Adding analysis result...');
+      if (!resultProjectName || !resultData.postId || !resultData.fieldName || !resultData.value) {
           setMessage('Please fill in all fields for the analysis result.');
           return;
       }
-     try {
-         const response = await apiService.addAnalysisResult(resultProjectName, resultData);
-         setMessage(`Analysis result added for project '${resultProjectName}' (Backend response: ${response.data.message})`);
-         setResultData({ postId: '', fieldName: '', value: '' });
-         // Keep resultProjectName potentially for multiple entries
-     } catch (error) {
-         setMessage(`Error adding result: ${error.response?.data?.message || error.message}`);
-     }
-   };
+      try {
+          const dataToSend = {
+              ...resultData,
+              postId: parseInt(resultData.postId) // Ensure postId is a number
+          };
+          const response = await apiService.addAnalysisResult(resultProjectName, dataToSend);
+          setMessage(`Analysis result added successfully for post ${resultData.postId} in project '${resultProjectName}'.`);
+          setResultProjectName('');
+          setResultData({ postId: '', fieldName: '', value: '' });
+      } catch (error) {
+          setMessage(`Error adding result: ${error.response?.data?.message || error.message}`);
+      }
+  };
 
   // Helper to get button style
   const getButtonStyle = (tabName) => ({
@@ -343,57 +438,88 @@ function DataEntryPage() {
         )}
 
         {activeTab === 'createUserAccount' && (
-            <form onSubmit={handleNewUserAccountSubmit}>
-                <h3>3. Create New User Account</h3>
-                {/* Required Fields */}
-                <div className="form-group">
-                    <label htmlFor="ua_social_media_name">Social Media Platform:</label>
-                    <input type="text" id="ua_social_media_name" name="social_media_name" value={newUserAccountData.social_media_name} onChange={handleNewUserAccountChange} required />
-                </div>
-                <div className="form-group">
-                    <label htmlFor="ua_username">Username:</label>
-                    <input type="text" id="ua_username" name="username" value={newUserAccountData.username} onChange={handleNewUserAccountChange} maxLength="40" required />
-                </div>
-                {/* Optional Fields */}
-                <div className="form-group">
-                    <label htmlFor="ua_first_name">First Name (Optional):</label>
-                    <input type="text" id="ua_first_name" name="first_name" value={newUserAccountData.first_name} onChange={handleNewUserAccountChange} />
-                </div>
-                <div className="form-group">
-                    <label htmlFor="ua_last_name">Last Name (Optional):</label>
-                    <input type="text" id="ua_last_name" name="last_name" value={newUserAccountData.last_name} onChange={handleNewUserAccountChange} />
-                </div>
+             <form onSubmit={handleNewUserAccountSubmit}>
+                 <h3>3. Create New User Account</h3>
+                 {platformsLoading && <p>Loading platforms...</p>}
+                 {platformsError && <p style={{ color: 'red' }}>{platformsError}</p>}
+                 {/* Required Fields */}
                  <div className="form-group">
-                    <label htmlFor="ua_country_birth">Country of Birth (Optional):</label>
-                    <input type="text" id="ua_country_birth" name="country_birth" value={newUserAccountData.country_birth} onChange={handleNewUserAccountChange} />
-                </div>
+                     <label htmlFor="ua_social_media_name">Social Media Platform:</label>
+                     <select
+                         id="ua_social_media_name"
+                         name="social_media_name"
+                         value={newUserAccountData.social_media_name}
+                         onChange={handleNewUserAccountChange}
+                         required
+                         disabled={platformsLoading || platformsError || platforms.length === 0}
+                     >
+                         {platforms.length === 0 && !platformsLoading && <option value="">No platforms available</option>}
+                         {platforms.map(platform => (
+                             <option key={platform.name} value={platform.name}>
+                                 {platform.name}
+                             </option>
+                         ))}
+                     </select>
+                 </div>
                  <div className="form-group">
-                    <label htmlFor="ua_country_residence">Country of Residence (Optional):</label>
-                    <input type="text" id="ua_country_residence" name="country_residence" value={newUserAccountData.country_residence} onChange={handleNewUserAccountChange} />
-                </div>
+                     <label htmlFor="ua_username">Username:</label>
+                     <input type="text" id="ua_username" name="username" value={newUserAccountData.username} onChange={handleNewUserAccountChange} maxLength="40" required />
+                 </div>
+                 {/* Optional Fields */}
                  <div className="form-group">
-                    <label htmlFor="ua_age">Age (Optional):</label>
-                    <input type="number" id="ua_age" name="age" value={newUserAccountData.age} onChange={handleNewUserAccountChange} min="1" />
-                </div>
+                     <label htmlFor="ua_first_name">First Name (Optional):</label>
+                     <input type="text" id="ua_first_name" name="first_name" value={newUserAccountData.first_name} onChange={handleNewUserAccountChange} />
+                 </div>
                  <div className="form-group">
-                    <label htmlFor="ua_gender">Gender (Optional):</label>
-                    <input type="text" id="ua_gender" name="gender" value={newUserAccountData.gender} onChange={handleNewUserAccountChange} />
-                </div>
-                 <div className="form-group">
-                    <label htmlFor="ua_verified">Verified Account:</label>
-                    <input type="checkbox" id="ua_verified" name="verified" checked={newUserAccountData.verified} onChange={handleNewUserAccountChange} />
-                </div>
-                <button type="submit">Create User Account</button>
-            </form>
-        )}
+                     <label htmlFor="ua_last_name">Last Name (Optional):</label>
+                     <input type="text" id="ua_last_name" name="last_name" value={newUserAccountData.last_name} onChange={handleNewUserAccountChange} />
+                 </div>
+                  <div className="form-group">
+                     <label htmlFor="ua_country_birth">Country of Birth (Optional):</label>
+                     <input type="text" id="ua_country_birth" name="country_birth" value={newUserAccountData.country_birth} onChange={handleNewUserAccountChange} />
+                 </div>
+                  <div className="form-group">
+                     <label htmlFor="ua_country_residence">Country of Residence (Optional):</label>
+                     <input type="text" id="ua_country_residence" name="country_residence" value={newUserAccountData.country_residence} onChange={handleNewUserAccountChange} />
+                 </div>
+                  <div className="form-group">
+                     <label htmlFor="ua_age">Age (Optional):</label>
+                     <input type="number" id="ua_age" name="age" value={newUserAccountData.age} onChange={handleNewUserAccountChange} min="1" />
+                 </div>
+                  <div className="form-group">
+                     <label htmlFor="ua_gender">Gender (Optional):</label>
+                     <input type="text" id="ua_gender" name="gender" value={newUserAccountData.gender} onChange={handleNewUserAccountChange} />
+                 </div>
+                  <div className="form-group">
+                     <label htmlFor="ua_verified">Verified Account:</label>
+                     <input type="checkbox" id="ua_verified" name="verified" checked={newUserAccountData.verified} onChange={handleNewUserAccountChange} />
+                 </div>
+                 <button type="submit" disabled={platformsLoading || platforms.length === 0}>Create User Account</button>
+             </form>
+         )}
 
         {activeTab === 'createPost' && (
           <form onSubmit={handleNewPostSubmit}>
               <h3>4. Create New Post</h3>
+              {platformsLoading && <p>Loading platforms...</p>}
+              {platformsError && <p style={{ color: 'red' }}>{platformsError}</p>}
               <div className="form-group">
-                  <label htmlFor="social_media_name">Social Media Name:</label>
-                  {/* You might want a dropdown if you have a fixed list of platforms */}
-                  <input type="text" id="social_media_name" name="social_media_name" value={newPostData.social_media_name} onChange={handleNewPostChange} required />
+                  <label htmlFor="post_social_media_name">Social Media Name:</label>
+                  <select
+                      id="post_social_media_name"
+                      name="social_media_name"
+                      value={newPostData.social_media_name}
+                      onChange={handleNewPostChange}
+                      required
+                      disabled={platformsLoading || platformsError || platforms.length === 0}
+                  >
+                      {platforms.length === 0 && !platformsLoading && <option value="">No platforms available</option>}
+                      {platforms.map(platform => (
+                          <option key={platform.name} value={platform.name}>
+                              {platform.name}
+                          </option>
+                      ))}
+                  </select>
               </div>
                <div className="form-group">
                   <label htmlFor="username">Username:</label>
@@ -405,11 +531,10 @@ function DataEntryPage() {
               </div>
               <div className="form-group">
                   <label htmlFor="post_date">Post Date:</label>
-                  {/* Use type="date" for better UX, ensure backend handles YYYY-MM-DD */}
-                  <input type="date" id="post_date" name="post_date" value={newPostData.post_date} onChange={handleNewPostChange} required />
+                  {/* Changed to datetime-local for time selection */}
+                  <input type="datetime-local" id="post_date" name="post_date" value={newPostData.post_date} onChange={handleNewPostChange} required />
               </div>
-              {/* Removed Author ID input */}
-              <button type="submit">Create Post</button>
+              <button type="submit" disabled={platformsLoading || platforms.length === 0}>Create Post</button>
           </form>
         )}
 
@@ -418,11 +543,11 @@ function DataEntryPage() {
             <h3>5. Associate Posts with Project</h3>
              <div className="form-group">
               <label htmlFor="assocProjectName">Project Name:</label>
-              <input type="text" id="assocProjectName" value={assocProjectName} onChange={(e) => setAssocProjectName(e.target.value)} required />
+              <input type="text" id="assocProjectName" name="assocProjectName" value={assocProjectName} onChange={handleAssociationChange} required />
             </div>
              <div className="form-group">
               <label htmlFor="assocPostIds">Post IDs (comma-separated):</label>
-              <input type="text" id="assocPostIds" value={assocPostIds} onChange={(e) => setAssocPostIds(e.target.value)} required />
+              <input type="text" id="assocPostIds" name="assocPostIds" value={assocPostIds} onChange={handleAssociationChange} required />
             </div>
              <button type="submit">Associate Posts</button>
           </form>
