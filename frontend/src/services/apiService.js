@@ -35,6 +35,23 @@ const addProjectField = (projectName, fieldData) => {
   return apiClient.post(`/projects/${encodedProjectName}/fields`, fieldData);
 };
 
+// --- Social Media Platform Endpoints ---
+const createSocialMediaPlatform = (platformData) => {
+    // platformData should be { name: '...' }
+    return apiClient.post('/social-media', platformData);
+};
+
+// Optional: Function to get existing platforms
+const getSocialMediaPlatforms = () => {
+    return apiClient.get('/social-media');
+};
+
+// --- User Account Endpoints ---
+const createUserAccount = (userData) => {
+    // userData should match the fields expected by POST /api/users
+    return apiClient.post('/users', userData);
+};
+
 // --- Post Endpoints ---
 const createPost = (postData) => {
     // postData should be { social_media_name, username, content, post_date }
@@ -66,6 +83,9 @@ const apiService = {
   associatePosts,
   addProjectField,
   addAnalysisResult,
+  createSocialMediaPlatform,
+  getSocialMediaPlatforms,
+  createUserAccount,
   createPost,
   queryPosts,
   queryExperiment,

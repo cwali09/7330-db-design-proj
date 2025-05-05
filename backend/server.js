@@ -5,6 +5,8 @@ require('dotenv').config(); // Load .env variables
 const projectRoutes = require('./routes/projects');
 const postRoutes = require('./routes/posts');
 const experimentRoutes = require('./routes/experiments'); // Using 'experiments' for project queries
+const userRoutes = require('./routes/users'); // <-- Import the new users router
+const socialMediaRoutes = require('./routes/socialMedia'); // <-- Import the new social media router
 
 const app = express();
 const PORT = process.env.API_PORT || 3001;
@@ -17,6 +19,8 @@ app.use(express.json()); // Parse JSON request bodies
 app.use('/api/projects', projectRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/experiments', experimentRoutes); // Route for experiment-related queries
+app.use('/api/users', userRoutes); // <-- Mount the users router
+app.use('/api/social-media', socialMediaRoutes); // <-- Mount the social media router
 
 // Basic root route
 app.get('/', (req, res) => {

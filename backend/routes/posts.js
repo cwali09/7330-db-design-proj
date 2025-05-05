@@ -72,7 +72,7 @@ router.post('/', async (req, res, next) => {
 
         // Insert the new post, linking to USER_ACCOUNT
         const [result] = await connection.query(
-            'INSERT INTO POST (social_media_name, username, content, post_date) VALUES (?, ?, ?, ?)',
+            'INSERT INTO POST (social_media_name, username, content, post_time) VALUES (?, ?, ?, ?)',
             [social_media_name, username, content, post_date]
         );
 
