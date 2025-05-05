@@ -53,8 +53,10 @@ const createUserAccount = (userData) => {
 };
 
 // --- Post Endpoints ---
+// Creates a new post. Expects { social_media_name, username, content }.
+// post_time is set automatically by the backend.
 const createPost = (postData) => {
-    // postData should be { social_media_name, username, content, post_date }
+    // postData should be { social_media_name, username, content }
     return apiClient.post('/posts', postData);
 };
 

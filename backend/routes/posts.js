@@ -2,57 +2,72 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 
-// --- Querying Routes ---
-
-// GET /api/posts/query - Find posts based on criteria
+// GET /api/posts/query - Find posts based on criteria by calling QueryPosts stored procedure
 router.get('/query', async (req, res, next) => {
-  const { socialMedia, startDate, endDate, username, firstName, lastName } = req.query;
+  // Extract query parameters, providing null if they are missing or empty strings
+  const socialMedia = req.query.socialMedia || null;
+  const startDate = req.query.startDate || null;
+  const endDate = req.query.endDate || null;
+  const username = req.query.username || null;
+  const firstName = req.query.firstName || null;
+  const lastName = req.query.lastName || null;
 
+  let connection;
   try {
-    // TODO: Implement logic to:
-    // 1. Build a dynamic SQL query based on the provided query parameters.
-    //    - Use parameterized queries to prevent SQL injection!
-    // 2. Handle date range filtering.
-    // 3. Handle username/socialMedia filtering (requires join with USER_ACCOUNT).
-    // 4. Handle firstName/lastName filtering (requires join with USER_ACCOUNT).
-    // 5. Join with PROJECT_POST and PROJECT to get associated project names.
-    // 6. Format the results as specified: text, poster (SM/User), time, associated projects.
+    connection = await db.getConnection();
+    console.log('Calling QueryPosts procedure with criteria:', { socialMedia, startDate, endDate, username, firstName, lastName });
 
-    console.log('Querying posts with criteria:', req.query);
+    // Construct the CALL statement with 7 placeholders
+    const procedureCall = 'CALL QueryPosts(?, ?, ?, ?, ?, ?, ?)';
+    const params = [socialMedia, startDate, endDate, username, socialMedia, firstName, lastName];
 
-    // Placeholder response - Replace with actual DB query results
-    const mockResults = [
-      {
-        text: 'This is a sample post content.',
-        poster: { socialMedia: socialMedia || 'Facebook', username: username || 'user123' },
-        time: new Date().toISOString(),
-        associatedProjects: ['Project Alpha', 'Project Beta']
-      }
-    ];
-    res.status(200).json(mockResults);
+    // Execute the stored procedure
+    // Stored procedures can return multiple result sets; the actual data is usually the first one.
+    const [results] = await connection.query(procedureCall, params);
+
+    // Assuming the procedure's main result set is the first element
+    const posts = results && Array.isArray(results[0]) ? results[0] : [];
+
+    console.log(`QueryPosts procedure returned ${posts.length} posts.`);
+    res.status(200).json(posts); // Return the results directly from the procedure
 
   } catch (err) {
-    console.error("Error querying posts:", err);
-    next(err);
+    console.error("Error calling QueryPosts procedure:", err);
+    // Provide more specific error feedback if possible
+    if (err.code === 'ER_SP_WRONG_NO_ARGS') {
+         res.status(500).json({ message: `Internal Server Error: Stored procedure argument mismatch. Please contact support.` }); // More generic message to user
+    } else {
+        res.status(500).json({ message: `Error executing post query: ${err.message}` });
+    }
+    // next(err); // Or pass to global error handler
+  } finally {
+    if (connection) {
+      connection.release(); // Always release the connection
+    }
   }
 });
 
-// POST /api/posts - Create a new post (Corrected for USER_ACCOUNT)
+// POST /api/posts - Create a new post (Auto-sets post_time)
 router.post('/', async (req, res, next) => {
-    // Expect social_media_name and username instead of author_id
-    const { social_media_name, username, content, post_date } = req.body;
+    // post_date is no longer sent from the frontend
+    const { social_media_name, username, content } = req.body;
 
-    // Basic validation
-    if (!social_media_name || !username || !content || !post_date) {
-        return res.status(400).json({ message: 'Missing required post fields (social_media_name, username, content, post_date)' });
+    // Basic validation (post_date removed)
+    if (!social_media_name || !username || content === undefined || content === null) { // Check content presence
+        return res.status(400).json({ message: 'Missing required post fields (social_media_name, username, content)' });
     }
     if (username.length > 40) {
         return res.status(400).json({ message: 'Username exceeds maximum length of 40 characters.' });
     }
+    // Content can be empty, but must be provided.
 
     let connection;
     try {
+        // Hash calculation is removed for this specific task
+        // const contentHash = calculateHash(content);
+
         connection = await db.getConnection();
+        await connection.beginTransaction(); // Use transaction for checks, insert, select
 
         // Check if the USER_ACCOUNT exists
         const [users] = await connection.query(
@@ -60,47 +75,76 @@ router.post('/', async (req, res, next) => {
             [social_media_name, username]
         );
         if (users.length === 0) {
+            await connection.rollback();
             connection.release();
-            // Note: The schema doesn't explicitly forbid creating posts for non-existent users,
-            // but it's generally good practice to require the user account first.
-            // Depending on requirements, you might auto-create the USER_ACCOUNT here,
-            // or return an error like below.
-            return res.status(400).json({ message: `User account '${username}' on platform '${social_media_name}' does not exist. Please create the user account first.` });
-            // If auto-creation is desired:
-            // await connection.query('INSERT IGNORE INTO USER_ACCOUNT (social_media_name, username) VALUES (?, ?)', [social_media_name, username]);
+            // Use 400 Bad Request as the user doesn't exist, which is a client error
+            return res.status(400).json({ message: `User account '${username}' on platform '${social_media_name}' does not exist.` });
         }
 
-        // Insert the new post, linking to USER_ACCOUNT
-        const [result] = await connection.query(
-            'INSERT INTO POST (social_media_name, username, content, post_time) VALUES (?, ?, ?, ?)',
-            [social_media_name, username, content, post_date]
+        // Insert the new post, using NOW() for post_time
+        // Removed content_hash, username_hash, social_media_name_hash from INSERT
+        // Assuming the database handles generated columns correctly or they are not strictly needed for this step
+        const insertSql = `
+            INSERT INTO POST (social_media_name, username, content, post_time)
+            VALUES (?, ?, ?, NOW())
+        `;
+
+        // Values array no longer includes post_date or hashes
+        const [result] = await connection.query(insertSql, [
+            social_media_name,
+            username,
+            content
+        ]);
+
+        const newPostId = result.insertId;
+
+        // Fetch the newly created post to get the actual post_time generated by NOW()
+        // Removed hash columns from SELECT
+        const [newPostRows] = await connection.query(
+            'SELECT post_id, social_media_name, username, content, post_time FROM POST WHERE post_id = ?',
+            [newPostId]
         );
 
-        const newPostId = result.insertId; // Get the ID of the newly inserted post
+        if (newPostRows.length === 0) {
+            await connection.rollback();
+            // connection.release(); // Release in finally block
+            return res.status(500).json({ message: 'Failed to retrieve created post.' });
+        }
 
-        console.log(`Post created successfully with ID: ${newPostId} by ${username} on ${social_media_name}`);
+        await connection.commit(); // Commit transaction
+
+        const createdPost = newPostRows[0];
+
+        console.log(`Post created successfully with ID: ${createdPost.post_id} by ${createdPost.username} on ${createdPost.social_media_name} at ${createdPost.post_time}`);
         res.status(201).json({
             message: 'Post created successfully',
-            data: {
-                post_id: newPostId, // Return the new post ID
-                social_media_name,
-                username,
-                content,
-                post_date
-            }
+            data: createdPost // Return the full post data including the generated post_time
         });
 
     } catch (err) {
         console.error("Error creating post:", err);
-        // Handle potential foreign key constraint errors if the platform doesn't exist
-        if (err.code === 'ER_NO_REFERENCED_ROW_2' && err.message.includes('fk_post_user')) {
-             // This error message assumes the FK constraint is named fk_post_user
+        if (connection) {
+            await connection.rollback(); // Rollback on error
+        }
+
+        // Keep relevant error handling (like duplicate post by time, FK constraints)
+        if (err.code === 'ER_DUP_ENTRY' && err.message.includes('unique_post_by_time')) {
+             // This is less likely now with NOW(), but possible in rapid succession or testing
+             return res.status(409).json({ message: 'A post by this user on this platform at this exact time already exists.' }); // 409 Conflict
+        }
+        // Handle potential foreign key constraint errors for user
+        if (err.code === 'ER_NO_REFERENCED_ROW_2' && err.message.includes('fk_post_user')) { // Check your actual FK name
              return res.status(400).json({ message: `User account '${username}' on platform '${social_media_name}' does not exist or platform '${social_media_name}' is invalid.` });
         }
-         if (err.code === 'ER_NO_REFERENCED_ROW_2' && err.message.includes('fk_post_platform')) {
-             // This error message assumes the FK constraint is named fk_post_platform
+         // Handle potential foreign key constraint errors for platform (assuming default name POST_ibfk_1 if not specified)
+         if (err.code === 'ER_NO_REFERENCED_ROW_2' && err.message.includes('POST_ibfk_1')) { // Check your actual FK name for platform if different
              return res.status(400).json({ message: `Social media platform '${social_media_name}' does not exist.` });
+         }
+        // Handle other potential duplicate errors if unique_post_by_content_user_media constraint exists and relies on generated columns
+        if (err.code === 'ER_DUP_ENTRY' && err.message.includes('unique_post_by_content_user_media')) {
+             return res.status(409).json({ message: 'This exact post (content, user, platform combination) already exists.' }); // 409 Conflict
         }
+
         next(err); // Pass other errors to the global error handler
     } finally {
         if (connection) {
