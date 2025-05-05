@@ -12,8 +12,6 @@ function App() {
   return (
     <Router>
       <div className="App">
-        <h1>Hello World - Testing Connection</h1>
-        <p>If you see this, everything is connected properly!</p>
         <nav className="navbar">
           <h1>Social Media Analyzer</h1>
           <ul>

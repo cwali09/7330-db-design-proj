@@ -250,9 +250,9 @@ router.get('/:projectName/experiment', async (req, res, next) => {
 
     try {
         connection = await db.getConnection();
-        console.log(`Calling QueryExperimentData procedure for project: ${projectName}`);
+        console.log(`Calling QueryExperiment procedure for project: ${projectName}`);
 
-        const procedureCall = 'CALL QueryExperimentData(?)';
+        const procedureCall = 'CALL QueryExperiment(?)';
         const params = [projectName];
 
         // Execute the stored procedure which returns multiple result sets
@@ -273,7 +273,7 @@ router.get('/:projectName/experiment', async (req, res, next) => {
         const postsData = results[0];
         const statisticsData = results[1];
 
-        console.log(`QueryExperimentData returned ${postsData.length} posts and ${statisticsData.length} field statistics.`);
+        console.log(`QueryExperiment returned ${postsData.length} posts and ${statisticsData.length} field statistics.`);
 
         res.status(200).json({
             posts: postsData,
@@ -281,13 +281,13 @@ router.get('/:projectName/experiment', async (req, res, next) => {
         });
 
     } catch (err) {
-        console.error(`Error calling QueryExperimentData procedure for project ${projectName}:`, err);
+        console.error(`Error calling QueryExperiment procedure for project ${projectName}:`, err);
         // Check if the error indicates the procedure doesn't exist or has wrong parameters
         if (err.code === 'ER_SP_DOES_NOT_EXIST') {
-             return res.status(500).json({ message: "Stored procedure 'QueryExperimentData' not found." });
+             return res.status(500).json({ message: "Stored procedure 'QueryExperiment' not found." });
         }
         if (err.code === 'ER_SP_WRONG_NO_OF_ARGS') {
-             return res.status(500).json({ message: "Stored procedure 'QueryExperimentData' called with incorrect number of arguments." });
+             return res.status(500).json({ message: "Stored procedure 'QueryExperiment' called with incorrect number of arguments." });
         }
         // Handle errors potentially thrown *by* the procedure if it encounters issues
         // (These might be generic SQL errors or custom signaled errors)
