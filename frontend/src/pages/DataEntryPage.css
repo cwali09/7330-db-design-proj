@@ -159,4 +159,71 @@ h3 {
     background-color: #f8d7da;
     color: #721c24;
     border: 1px solid #f5c6cb;
+}
+
+/* Styling for the dynamic field entries in the New Project form */
+.field-entry {
+    border: 1px dashed #ccc;
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 4px;
+    background-color: #fdfdfd;
+    position: relative; /* For positioning the remove button */
+}
+
+.field-entry .form-group {
+    margin-bottom: 10px; /* Smaller margin within field entry */
+}
+
+.field-entry label {
+    font-size: 0.85em; /* Slightly smaller label */
+}
+
+.add-field-button,
+.remove-field-button {
+    padding: 5px 10px;
+    font-size: 0.8em;
+    cursor: pointer;
+    border-radius: 3px;
+    margin-top: 5px;
+    border: 1px solid #ccc;
+    background-color: #f0f0f0;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.add-field-button {
+    background-color: #e7f7ec;
+    border-color: #b8e6c7;
+    color: #1f7a3d;
+}
+.add-field-button:hover {
+    background-color: #d1f0db;
+}
+
+.remove-field-button {
+    background-color: #fdeaea;
+    border-color: #f5c6cb;
+    color: #721c24;
+    /* Position absolute if desired */
+    /* position: absolute; */
+    /* top: 10px; */
+    /* right: 10px; */
+    margin-left: 10px; /* Add space if inline */
+}
+.remove-field-button:hover {
+    background-color: #f8d7da;
+}
+
+/* Adjust fieldset padding/margin if needed */
+.tab-content fieldset {
+    margin-bottom: 20px;
+    padding: 15px;
+    border: 1px solid #e0e0e0;
+    border-radius: 5px;
+}
+
+.tab-content fieldset legend {
+    font-weight: bold;
+    padding: 0 5px;
+    color: #333;
 } 

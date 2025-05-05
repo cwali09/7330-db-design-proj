@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
+const crypto = require('crypto');
 
 // GET /api/posts/query - Find posts based on criteria by calling QueryPosts stored procedure
 router.get('/query', async (req, res, next) => {
@@ -146,6 +147,51 @@ router.post('/', async (req, res, next) => {
         }
 
         next(err); // Pass other errors to the global error handler
+    } finally {
+        if (connection) {
+            connection.release(); // Always release the connection
+        }
+    }
+});
+
+// GET /api/posts/by-user - Fetch posts for a specific user account
+router.get('/by-user', async (req, res, next) => {
+    const { socialMediaName, username } = req.query;
+
+    // --- Validation ---
+    if (!socialMediaName || !username) {
+        return res.status(400).json({ message: 'Missing required query parameters: socialMediaName and username' });
+    }
+
+    let connection;
+    try {
+        connection = await db.getConnection();
+
+        // Query posts for the given user account, ordered by time descending
+        // Select only necessary fields for the dropdown
+        const sql = `
+            SELECT post_id, content, post_time
+            FROM POST
+            WHERE social_media_name = ? AND username = ?
+            ORDER BY post_time DESC
+            LIMIT 100; -- Add a limit to prevent excessively large responses
+        `;
+        const params = [socialMediaName, username];
+
+        const [posts] = await connection.query(sql, params);
+
+        if (posts.length === 0) {
+            console.log(`No posts found for user ${username} on ${socialMediaName}`);
+            // It's not an error if no posts are found, just return an empty array
+        } else {
+            console.log(`Found ${posts.length} posts for user ${username} on ${socialMediaName}`);
+        }
+
+        res.status(200).json(posts); // Return the array of posts (can be empty)
+
+    } catch (err) {
+        console.error(`Error fetching posts for user ${username} on ${socialMediaName}:`, err);
+        next(err); // Pass errors to the global error handler
     } finally {
         if (connection) {
             connection.release(); // Always release the connection

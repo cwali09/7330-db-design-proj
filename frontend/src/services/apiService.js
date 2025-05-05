@@ -13,8 +13,18 @@ const apiClient = axios.create({
 });
 
 // --- Project Endpoints ---
+// Creates a new project (without fields).
+// Expects projectData like: { name, start_date, ..., manager_last_name }
 const createProject = (projectData) => {
   return apiClient.post('/projects', projectData);
+};
+
+// Adds multiple analysis fields to an existing project.
+// Expects fieldsData like: [{ field_name, description }, ...]
+const addProjectFields = (projectName, fieldsData) => {
+  const encodedProjectName = encodeURIComponent(projectName);
+  // Send the array of fields in the request body
+  return apiClient.post(`/projects/${encodedProjectName}/fields`, { fields: fieldsData });
 };
 
 const associatePosts = (projectName, postIds) => {
@@ -23,16 +33,12 @@ const associatePosts = (projectName, postIds) => {
   return apiClient.post(`/projects/${encodedProjectName}/posts`, { postIds });
 };
 
-const addAnalysisResult = (projectName, resultData) => {
-  const encodedProjectName = encodeURIComponent(projectName);
-  // Assuming resultData is { postId, fieldName, value }
-  return apiClient.post(`/projects/${encodedProjectName}/results`, resultData);
-};
-
-const addProjectField = (projectName, fieldData) => {
-  const encodedProjectName = encodeURIComponent(projectName);
-  // fieldData should be { field_name: '...', description: '...' }
-  return apiClient.post(`/projects/${encodedProjectName}/fields`, fieldData);
+// --- Analysis Result Endpoints ---
+// Adds a single analysis result for a specific post within a project.
+// Expects resultData like: { projectName, postId, fieldName, value }
+const addAnalysisResult = (resultData) => {
+  // Assuming the backend route is POST /api/results
+  return apiClient.post('/results', resultData);
 };
 
 // --- Social Media Platform Endpoints ---
@@ -79,11 +85,18 @@ const queryExperiment = (projectName) => {
   return apiClient.get(`/projects/${encodedProjectName}/experiment`);
 };
 
+// Fetches posts for a specific user account
+const getPostsByUser = (socialMediaName, username) => {
+    return apiClient.get('/posts/by-user', {
+        params: { socialMediaName, username }
+    });
+};
+
 // Export functions
 const apiService = {
   createProject,
+  addProjectFields,
   associatePosts,
-  addProjectField,
   addAnalysisResult,
   createSocialMediaPlatform,
   getSocialMediaPlatforms,
@@ -91,6 +104,7 @@ const apiService = {
   createPost,
   queryPosts,
   queryExperiment,
+  getPostsByUser,
 };
 
 export default apiService; 
