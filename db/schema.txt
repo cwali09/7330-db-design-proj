@@ -1,0 +1,262 @@
+-- schema.txt (Revised with Comments Addressing Feedback)
+
+-- Represents the social media platforms. Using name as PK aligns with the description [cite: 34]
+-- and simplifies joins where the platform name is known.
+CREATE TABLE SOCIAL_MEDIA (
+    name VARCHAR(50) PRIMARY KEY,
+    CONSTRAINT check_social_media_name CHECK (name != '')
+);
+
+-- Stores project managers.
+CREATE TABLE PROJECT_MANAGER (
+    manager_id VARCHAR(50) PRIMARY KEY, -- Using a distinct ID for managers
+    first_name VARCHAR(50) NOT NULL,
+    last_name VARCHAR(50) NOT NULL
+);
+
+-- Stores institutes associated with projects.
+CREATE TABLE INSTITUTE (
+    name VARCHAR(100) PRIMARY KEY -- Institute name is unique [cite: 42]
+);
+
+-- Represents user accounts on specific social media platforms.
+-- The composite PK (username, social_media_name) correctly models the requirement
+-- that usernames are unique per media platform[cite: 35].
+-- Using social_media_name directly as part of the PK/FK avoids an extra join
+-- compared to using a surrogate ID for SOCIAL_MEDIA.
+CREATE TABLE USER_ACCOUNT (
+    username VARCHAR(40) NOT NULL,
+    social_media_name VARCHAR(50) NOT NULL,
+    first_name VARCHAR(50),
+    last_name VARCHAR(50),
+    country_birth VARCHAR(50),
+    country_residence VARCHAR(50),
+    age INT,
+    gender VARCHAR(20),
+    verified BOOLEAN DEFAULT FALSE,
+    PRIMARY KEY (username, social_media_name),
+    FOREIGN KEY (social_media_name) REFERENCES SOCIAL_MEDIA(name) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT check_age CHECK (age IS NULL OR age > 0)
+);
+
+-- Stores project information.
+CREATE TABLE PROJECT (
+    name VARCHAR(100) PRIMARY KEY, -- Project name is unique [cite: 42]
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    institute_name VARCHAR(100) NOT NULL,
+    manager_id VARCHAR(50) NOT NULL,
+    FOREIGN KEY (institute_name) REFERENCES INSTITUTE(name) ON UPDATE CASCADE,
+    FOREIGN KEY (manager_id) REFERENCES PROJECT_MANAGER(manager_id) ON UPDATE CASCADE,
+    CONSTRAINT check_project_dates CHECK (end_date >= start_date) -- [cite: 43]
+);
+
+-- Represents individual posts.
+CREATE TABLE POST (
+    post_id INT AUTO_INCREMENT PRIMARY KEY, -- Surrogate key for unique post identification
+    content TEXT NOT NULL, -- Arbitrary length text [cite: 33]
+    post_time DATETIME NOT NULL, -- [cite: 36]
+    username VARCHAR(40) NOT NULL,
+    social_media_name VARCHAR(50) NOT NULL,
+    city VARCHAR(50),
+    state VARCHAR(50),
+    country VARCHAR(50),
+    likes INT DEFAULT 0,
+    dislikes INT DEFAULT 0,
+    has_multimedia BOOLEAN DEFAULT FALSE, -- [cite: 39]
+    FOREIGN KEY (username, social_media_name) REFERENCES USER_ACCOUNT(username, social_media_name)
+        ON UPDATE CASCADE, -- Ensures post belongs to a valid user account
+    CONSTRAINT check_likes CHECK (likes >= 0), -- [cite: 39]
+    CONSTRAINT check_dislikes CHECK (dislikes >= 0), -- [cite: 39]
+    -- Ensures a user cannot post multiple times on the same platform at the exact same time [cite: 38]
+    CONSTRAINT unique_post_time UNIQUE (username, social_media_name, post_time)
+);
+
+-- Represents fields defined for analysis within a project.
+-- Composite PK ensures field names are unique within a project[cite: 46].
+CREATE TABLE FIELD (
+    field_name VARCHAR(100) NOT NULL,
+    project_name VARCHAR(100) NOT NULL,
+    description TEXT,
+    PRIMARY KEY (field_name, project_name),
+    FOREIGN KEY (project_name) REFERENCES PROJECT(name) ON DELETE CASCADE ON UPDATE CASCADE -- Field belongs to a project
+);
+
+-- Represents reposts of existing posts.
+CREATE TABLE REPOST (
+    repost_id INT AUTO_INCREMENT PRIMARY KEY, -- Unique ID for the repost event
+    post_id INT NOT NULL, -- The original post being reposted
+    username VARCHAR(40) NOT NULL, -- User who reposted
+    social_media_name VARCHAR(50) NOT NULL, -- Platform of the user who reposted
+    repost_time DATETIME NOT NULL, -- Time of the repost [cite: 37]
+    FOREIGN KEY (post_id) REFERENCES POST(post_id) ON DELETE CASCADE ON UPDATE CASCADE, -- Link to the original post
+    FOREIGN KEY (username, social_media_name) REFERENCES USER_ACCOUNT(username, social_media_name)
+        ON UPDATE CASCADE, -- Link to the user who reposted
+    -- Prevents duplicate reposts of the same post by the same user at the exact same time
+    CONSTRAINT unique_repost UNIQUE (post_id, username, social_media_name, repost_time)
+);
+
+-- Linking table for the many-to-many relationship between PROJECT and POST.
+-- This table represents the *relationship* conceptually, as mentioned in the feedback.
+-- It stores which posts are included in which projects[cite: 53].
+CREATE TABLE PROJECT_POST (
+    project_name VARCHAR(100) NOT NULL,
+    post_id INT NOT NULL,
+    PRIMARY KEY (project_name, post_id), -- Ensures a post is linked to a project only once
+    FOREIGN KEY (project_name) REFERENCES PROJECT(name) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (post_id) REFERENCES POST(post_id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+-- Stores the results of analysis for a specific post within a specific project for a specific field.
+-- This table directly addresses the requirement to store analysis results [cite: 47, 48]
+-- and associates field values with individual posts for a project.
+-- The PK and FKs ensure consistency: a result links a specific post (via post_id),
+-- analyzed within a specific project (via project_name), for a field defined
+-- for that project (via field_name, project_name).
+CREATE TABLE ANALYSIS_RESULT (
+    project_name VARCHAR(100) NOT NULL,
+    post_id INT NOT NULL,
+    field_name VARCHAR(100) NOT NULL,
+    value TEXT, -- The result value, stored as text [cite: 48]
+    PRIMARY KEY (project_name, post_id, field_name), -- Unique result per post/project/field
+    -- Ensures the result corresponds to a post actually included in the project
+    FOREIGN KEY (project_name, post_id) REFERENCES PROJECT_POST(project_name, post_id)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    -- Ensures the result corresponds to a field defined for that project
+    FOREIGN KEY (field_name, project_name) REFERENCES FIELD(field_name, project_name)
+        ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+-- Indexes for performance optimization (consider adding more based on query patterns)
+CREATE INDEX idx_post_social_media ON POST(social_media_name);
+CREATE INDEX idx_post_time ON POST(post_time);
+CREATE INDEX idx_post_user ON POST(username, social_media_name);
+CREATE INDEX idx_post_location ON POST(country, state, city);
+CREATE INDEX idx_project_dates ON PROJECT(start_date, end_date);
+CREATE INDEX idx_project_institute ON PROJECT(institute_name);
+CREATE INDEX idx_project_manager ON PROJECT(manager_id);
+CREATE INDEX idx_repost_user ON REPOST(username, social_media_name);
+CREATE INDEX idx_field_project ON FIELD(project_name);
+CREATE INDEX idx_analysis_result_field ON ANALYSIS_RESULT(project_name, field_name); -- Added index
+
+-- Views for common query operations (remain unchanged)
+CREATE VIEW POST_DETAILS AS
+SELECT
+    p.post_id, p.content, p.post_time, p.username, p.social_media_name, p.city, p.state, p.country,
+    p.likes, p.dislikes, p.has_multimedia,
+    u.first_name AS user_first_name, u.last_name AS user_last_name, u.verified AS user_verified
+FROM POST p
+JOIN USER_ACCOUNT u ON p.username = u.username AND p.social_media_name = u.social_media_name;
+
+CREATE VIEW PROJECT_DETAILS AS
+SELECT
+    p.name AS project_name, p.start_date, p.end_date,
+    i.name AS institute_name,
+    pm.first_name AS manager_first_name, pm.last_name AS manager_last_name
+FROM PROJECT p
+JOIN INSTITUTE i ON p.institute_name = i.name
+JOIN PROJECT_MANAGER pm ON p.manager_id = pm.manager_id;
+
+CREATE VIEW ANALYSIS_RESULTS_DETAIL AS
+SELECT
+    ar.project_name, ar.post_id, ar.field_name, ar.value,
+    p.content AS post_content, p.username, p.social_media_name, p.post_time,
+    f.description AS field_description
+FROM ANALYSIS_RESULT ar
+JOIN POST p ON ar.post_id = p.post_id -- Join directly to POST to get post details
+JOIN FIELD f ON ar.field_name = f.field_name AND ar.project_name = f.project_name;
+
+-- Stored procedure for querying posts (remain unchanged)
+DELIMITER //
+CREATE PROCEDURE QueryPosts(
+    IN p_social_media VARCHAR(50),
+    IN p_start_time DATETIME,
+    IN p_end_time DATETIME,
+    IN p_username VARCHAR(40),
+    IN p_user_social_media VARCHAR(50),
+    IN p_first_name VARCHAR(50),
+    IN p_last_name VARCHAR(50)
+)
+BEGIN
+    SELECT
+        p.post_id, p.content, p.post_time, p.username, p.social_media_name, p.city, p.state, p.country,
+        p.likes, p.dislikes, p.has_multimedia,
+        -- Aggregate project names associated with the post
+        GROUP_CONCAT(DISTINCT pp.project_name SEPARATOR ', ') AS associated_projects
+    FROM POST p
+    LEFT JOIN USER_ACCOUNT u ON p.username = u.username AND p.social_media_name = u.social_media_name
+    LEFT JOIN PROJECT_POST pp ON p.post_id = pp.post_id -- Join to find associated projects
+    WHERE
+        (p_social_media IS NULL OR p.social_media_name = p_social_media)
+        AND (p_start_time IS NULL OR p.post_time >= p_start_time)
+        AND (p_end_time IS NULL OR p.post_time <= p_end_time)
+        AND (p_username IS NULL OR p.username = p_username AND p_user_social_media IS NULL OR p.social_media_name = p_user_social_media) -- Combined user check
+        AND (p_first_name IS NULL OR u.first_name LIKE CONCAT('%', p_first_name, '%')) -- Allow partial match for names
+        AND (p_last_name IS NULL OR u.last_name LIKE CONCAT('%', p_last_name, '%')) -- Allow partial match for names
+    GROUP BY p.post_id -- Group by post to aggregate projects
+    ORDER BY p.post_time DESC;
+END //
+DELIMITER ;
+
+
+-- Stored procedure for querying experiment details (modified for clarity and correctness)
+DELIMITER //
+CREATE PROCEDURE QueryExperiment(
+    IN p_project_name VARCHAR(100)
+)
+BEGIN
+    -- Temporary table to store counts per field for clarity
+    CREATE TEMPORARY TABLE FieldCompletion (
+        field_name VARCHAR(100) PRIMARY KEY,
+        completion_count INT,
+        total_project_posts INT
+    );
+
+    -- Calculate total posts for the project
+    SET @total_posts = (SELECT COUNT(*) FROM PROJECT_POST WHERE project_name = p_project_name);
+
+    -- Calculate completion count per field
+    INSERT INTO FieldCompletion (field_name, completion_count, total_project_posts)
+    SELECT
+        ar.field_name,
+        COUNT(DISTINCT ar.post_id), -- Count distinct posts that have a value for this field
+        @total_posts
+    FROM ANALYSIS_RESULT ar
+    WHERE ar.project_name = p_project_name AND ar.value IS NOT NULL
+    GROUP BY ar.field_name;
+
+    -- Return project posts with analysis results and completion stats
+    SELECT
+        pp.project_name,
+        p.post_id,
+        p.content,
+        p.username,
+        p.social_media_name,
+        p.post_time,
+        f.field_name,
+        f.description AS field_description,
+        ar.value,
+        COALESCE(fc.completion_count, 0) AS field_completion_count, -- Use calculated count
+        @total_posts AS total_project_posts,
+        -- Calculate percentage using calculated count and total posts
+        (COALESCE(fc.completion_count, 0) / NULLIF(@total_posts, 0)) * 100 AS field_completion_percentage
+    FROM
+        PROJECT_POST pp
+        JOIN POST p ON pp.post_id = p.post_id
+        JOIN FIELD f ON pp.project_name = f.project_name -- All fields defined for the project
+        -- Left join analysis results to include posts/fields even without results yet
+        LEFT JOIN ANALYSIS_RESULT ar ON pp.project_name = ar.project_name
+            AND pp.post_id = ar.post_id
+            AND f.field_name = ar.field_name
+        -- Left join pre-calculated completion stats
+        LEFT JOIN FieldCompletion fc ON f.field_name = fc.field_name
+    WHERE
+        pp.project_name = p_project_name
+    ORDER BY
+        p.post_id, f.field_name;
+
+    -- Drop the temporary table
+    DROP TEMPORARY TABLE FieldCompletion;
+
+END //
+DELIMITER ;

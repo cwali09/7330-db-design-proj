@@ -1,0 +1,28 @@
+version: '3.8' # Use a recent version
+
+services:
+  # Define the MySQL database service
+  db:
+    image: mysql:8.0 # Use an official MySQL image (version 8.0 is common)
+    container_name: social-media-db-container # Optional: A friendly name for the container
+    restart: unless-stopped # Restart the container if it stops unexpectedly
+    environment:
+      MYSQL_DATABASE: ${DB_NAME:-social_media_db} # Database name (uses .env or default)
+      MYSQL_USER: ${DB_USER:-app_user}           # Application user (uses .env or default)
+      MYSQL_PASSWORD: ${DB_PASSWORD:-app_password} # Application user password (uses .env or default)
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root_secret} # Root password (keep this secure!)
+    ports:
+      # Map port 3306 inside the container to port 3311 on the host machine
+      # Format: HOST:CONTAINER
+      - "3311:3306"
+    volumes:
+      # Persist database data even if the container is removed and recreated
+      # Creates a named volume called 'mysql_data'
+      - mysql_data:/var/lib/mysql
+      # Optional: Mount the schema file to initialize the DB on first run
+      # Make sure the path db/schema.txt is correct relative to docker-compose.yml
+      - ./db/schema.txt:/docker-entrypoint-initdb.d/schema.sql
+
+# Define the named volume for data persistence
+volumes:
+  mysql_data: 

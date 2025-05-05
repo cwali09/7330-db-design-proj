@@ -1,0 +1,45 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Launch Backend (Node.js)",
+      "skipFiles": [
+        "<node_internals>/**"
+      ],
+      // Point to the main server file in the backend directory
+      "program": "${workspaceFolder}/backend/server.js",
+      // Set the working directory to the backend folder
+      "cwd": "${workspaceFolder}/backend",
+      // Ensure the process stops when the debugger detaches
+      "stopOnEntry": false,
+      // Load environment variables from backend/.env
+      "envFile": "${workspaceFolder}/backend/.env",
+      // Restart the server automatically when code changes are saved
+      "restart": true,
+      // Use nodemon if available for better auto-restarting (optional)
+      // "runtimeExecutable": "nodemon",
+      "console": "integratedTerminal" // Show output in VS Code's integrated terminal
+    },
+    {
+      "type": "chrome", // Or "msedge" if you prefer Edge
+      "request": "launch",
+      "name": "Launch Frontend (Chrome)",
+      // URL the React development server runs on (usually 3000)
+      "url": "http://localhost:3000",
+      // Point to the frontend directory for source mapping
+      "webRoot": "${workspaceFolder}/frontend/source",
+      // Optional: Specify user data directory for a clean browser instance
+      // "userDataDir": "${workspaceFolder}/.vscode/chrome-debug-profile",
+      "sourceMaps": true,
+      "sourceMapPathOverrides": {
+        "webpack:///source/*": "${webRoot}/*"
+      }
+    }
+    // You can add more configurations, e.g., for attaching to an already running process
+  ]
+} 
