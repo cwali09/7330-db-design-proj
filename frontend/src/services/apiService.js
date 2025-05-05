@@ -76,7 +76,7 @@ const queryPosts = (criteria) => {
 // --- Experiment Query Endpoint ---
 const queryExperiment = (projectName) => {
   const encodedProjectName = encodeURIComponent(projectName);
-  return apiClient.get(`/experiments/${encodedProjectName}`);
+  return apiClient.get(`/projects/${encodedProjectName}/experiment`);
 };
 
 // Export functions

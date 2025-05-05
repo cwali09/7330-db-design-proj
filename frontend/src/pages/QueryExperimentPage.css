@@ -1,0 +1,206 @@
+/* Styling for the Query Experiment page */
+.query-experiment-container {
+    padding: 20px;
+    max-width: 950px;
+    margin: 20px auto;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+h1, h2 {
+    color: #333;
+    margin-bottom: 15px;
+}
+
+h1 {
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+h2 {
+    border-bottom: 1px solid #eee;
+    padding-bottom: 5px;
+    margin-top: 25px; /* Add space above section titles */
+}
+
+/* Form Styling */
+.query-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-bottom: 20px;
+    background-color: #fff;
+    padding: 15px;
+    border: 1px solid #e0e0e0;
+    border-radius: 5px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group label {
+    margin-bottom: 5px;
+    font-weight: bold;
+    font-size: 0.9em;
+}
+
+.form-group input[type="text"] {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+.query-form button {
+    padding: 10px 15px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1rem;
+    align-self: flex-start;
+    transition: background-color 0.2s ease;
+}
+
+.query-form button:hover {
+    background-color: #0056b3;
+}
+
+.query-form button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+}
+
+/* Message Area Styling */
+.message {
+    margin-top: 15px;
+    margin-bottom: 15px;
+    padding: 10px;
+    border-radius: 4px;
+    text-align: center;
+}
+
+.message.success { /* Although success message might be cleared if data loads */
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.message.error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+/* Results Container */
+.results-container {
+    margin-top: 20px;
+}
+
+/* Statistics Section */
+.statistics-section {
+    background-color: #fff;
+    padding: 15px;
+    border: 1px solid #e0e0e0;
+    border-radius: 5px;
+    margin-bottom: 25px;
+}
+
+.stats-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    font-size: 0.9em;
+}
+
+.stats-table th,
+.stats-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+
+.stats-table th {
+    background-color: #f2f2f2;
+    font-weight: bold;
+}
+
+.stats-table td:nth-child(3) { /* Percentage column */
+    text-align: right;
+}
+
+/* Posts Section */
+.posts-section {
+    margin-top: 20px;
+}
+
+.post-item {
+    background-color: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 5px;
+    padding: 15px;
+    margin-bottom: 15px;
+    display: flex; /* Use flexbox for layout */
+    gap: 20px; /* Space between details and results */
+    flex-wrap: wrap; /* Allow wrapping on small screens */
+}
+
+.post-details {
+    flex: 2; /* Take more space */
+    min-width: 250px;
+}
+
+.post-results {
+    flex: 1; /* Take less space */
+    min-width: 200px;
+    background-color: #f8f9fa; /* Slightly different background */
+    padding: 10px;
+    border-radius: 4px;
+    border: 1px solid #eee;
+}
+
+.post-item p {
+    margin: 5px 0;
+    line-height: 1.4;
+}
+
+.post-item strong {
+    color: #555;
+}
+
+.post-content {
+    white-space: pre-wrap; /* Preserve whitespace and wrap */
+    word-wrap: break-word;
+    background-color: #fdfdfd;
+    border: 1px dashed #eee;
+    padding: 8px;
+    margin-top: 5px;
+    max-height: 150px; /* Limit height */
+    overflow-y: auto; /* Add scroll if content exceeds max height */
+}
+
+.post-results ul {
+    list-style: none;
+    padding: 0;
+    margin: 5px 0 0 0;
+}
+
+.post-results li {
+    margin-bottom: 5px;
+    font-size: 0.9em;
+    border-bottom: 1px dotted #eee;
+    padding-bottom: 3px;
+}
+
+.post-results li strong {
+    color: #0056b3; /* Highlight field name */
+}
+
+.post-results p em { /* Style "No results" message */
+    color: #6c757d;
+    font-size: 0.9em;
+} 

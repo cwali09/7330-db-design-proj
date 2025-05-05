@@ -278,6 +278,57 @@ router.post('/:projectName/results', async (req, res, next) => {
   }
 });
 
+// GET /api/projects/:projectName/experiment - Query experiment data
+router.get('/:projectName/experiment', async (req, res, next) => {
+    const { projectName } = req.params;
+    let connection;
+
+    try {
+        connection = await db.getConnection();
+        console.log(`Calling QueryExperimentData procedure for project: ${projectName}`);
+
+        const procedureCall = 'CALL QueryExperimentData(?)';
+        const params = [projectName];
+
+        // Execute the stored procedure which returns multiple result sets
+        const [results] = await connection.query(procedureCall, params);
+
+        // results[0] = Posts and their results
+        // results[1] = Field statistics
+        // results[2] = Metadata about the procedure call itself (ignore)
+
+        // Check if the first result set is empty AND the second is empty.
+        // This indicates our procedure signaled "Project not found".
+        if (results[0].length === 0 && results[1].length === 0) {
+             console.log(`Project not found: ${projectName}`);
+             // Send a 404 Not Found status
+             return res.status(404).json({ message: `Project '${projectName}' not found.` });
+        }
+
+        const postsData = results[0];
+        const statisticsData = results[1];
+
+        // The 'results' field in postsData should already be JSON parsed by mysql2 if using JSON functions
+        // If not using JSON functions, you'd need to group rows here based on post_id
+
+        console.log(`QueryExperimentData returned ${postsData.length} posts and ${statisticsData.length} field statistics.`);
+
+        res.status(200).json({
+            posts: postsData,
+            statistics: statisticsData
+        });
+
+    } catch (err) {
+        console.error(`Error calling QueryExperimentData procedure for project ${projectName}:`, err);
+        // Distinguish between DB errors and project not found (handled above)
+        res.status(500).json({ message: `Error querying experiment data: ${err.message}` });
+        // next(err); // Or pass to global error handler
+    } finally {
+        if (connection) {
+            connection.release(); // Always release the connection
+        }
+    }
+});
 
 // TODO: Add routes for creating/managing Fields within a project if needed separately
 // --> Added POST /:projectName/fields above
