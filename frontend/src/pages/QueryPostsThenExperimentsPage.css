@@ -1,0 +1,279 @@
+/* Basic styling for the Query Posts Then Experiments page */
+.query-posts-experiments-container {
+    padding: 20px;
+    max-width: 1100px;
+    margin: 20px auto;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+h1, h2, h3, h4 {
+    color: #333;
+}
+
+h1 {
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+h2 {
+    margin-top: 25px;
+    margin-bottom: 15px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 5px;
+}
+
+h3 {
+    margin-top: 20px;
+    margin-bottom: 10px;
+    color: #0056b3;
+}
+
+h4 {
+    margin-top: 15px;
+    margin-bottom: 8px;
+    font-size: 1.1em;
+    color: #444;
+}
+
+
+/* Query Section */
+.query-section {
+    background-color: #fff;
+    padding: 20px;
+    border: 1px solid #e0e0e0;
+    border-radius: 5px;
+    margin-bottom: 25px;
+}
+
+.query-form .form-row {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+}
+
+.query-form .form-group {
+    flex: 1;
+    min-width: 200px;
+    display: flex;
+    flex-direction: column;
+}
+.query-form .form-group.full-width {
+    flex-basis: 100%;
+}
+
+
+.query-form label {
+    margin-bottom: 5px;
+    font-weight: bold;
+    font-size: 0.9em;
+}
+
+.query-form input[type="text"],
+.query-form input[type="date"] {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+.query-form .form-actions {
+    margin-top: 15px;
+    display: flex;
+    gap: 10px;
+}
+
+.query-form button,
+.find-experiments-button {
+    padding: 10px 15px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background-color 0.2s ease;
+}
+
+.query-form button:hover,
+.find-experiments-button:hover {
+    background-color: #0056b3;
+}
+
+.query-form button:disabled,
+.find-experiments-button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+}
+
+.query-form button[type="button"] {
+    background-color: #6c757d;
+}
+.query-form button[type="button"]:hover {
+    background-color: #5a6268;
+}
+
+
+/* Results Section */
+.results-section {
+    margin-top: 25px;
+    padding-top: 15px;
+    border-top: 1px solid #ddd;
+}
+
+/* Simple Post List (Stage 2) */
+.simple-post-list {
+    list-style: none;
+    padding: 0;
+    margin-top: 15px;
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid #eee;
+    background-color: #fff;
+    padding: 10px;
+    border-radius: 4px;
+}
+
+.simple-post-list li {
+    padding: 8px 5px;
+    border-bottom: 1px dotted #eee;
+    font-size: 0.9em;
+}
+.simple-post-list li:last-child {
+    border-bottom: none;
+}
+
+/* Experiment Item (Stage 3) */
+.experiment-item {
+    background-color: #fff;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.experiment-details p {
+    margin: 5px 0;
+    font-size: 0.95em;
+}
+
+/* Nested Post Item (within Experiment) */
+.post-item-nested {
+    border: 1px dashed #e0e0e0;
+    border-radius: 4px;
+    padding: 15px;
+    margin: 15px 0;
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+    background-color: #fdfdfd;
+}
+
+.post-details-nested {
+    flex: 2;
+    min-width: 250px;
+}
+
+.post-results-nested {
+    flex: 1;
+    min-width: 200px;
+    background-color: #f8f9fa;
+    padding: 10px;
+    border-radius: 4px;
+    border: 1px solid #eee;
+    font-size: 0.9em;
+}
+
+.post-item-nested p {
+    margin: 4px 0;
+    font-size: 0.9em;
+}
+
+.post-content-nested {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    max-height: 100px;
+    overflow-y: auto;
+    background-color: #fff;
+    border: 1px solid #f0f0f0;
+    padding: 5px;
+    font-size: 0.85em;
+    margin-top: 5px;
+}
+
+.post-results-nested ul {
+    list-style: none;
+    padding: 0;
+    margin: 5px 0 0 0;
+}
+
+.post-results-nested li {
+    margin-bottom: 4px;
+    padding-bottom: 2px;
+    border-bottom: 1px dotted #eee;
+}
+.post-results-nested li strong {
+     color: #0056b3;
+}
+
+.highlight-post {
+    font-weight: bold;
+    color: #28a745; /* Green */
+    margin-left: 5px;
+    font-size: 0.9em;
+}
+
+
+/* Statistics Table */
+.statistics-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    font-size: 0.9em;
+}
+
+.statistics-table th,
+.statistics-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+    vertical-align: top;
+}
+
+.statistics-table th {
+    background-color: #f2f2f2;
+    font-weight: bold;
+}
+
+.statistics-table tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+
+/* Message Styles */
+.message {
+    padding: 10px 15px;
+    margin-bottom: 20px;
+    border-radius: 4px;
+    border: 1px solid transparent;
+}
+
+.message.success {
+    background-color: #d4edda;
+    color: #155724;
+    border-color: #c3e6cb;
+}
+
+.message.error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border-color: #f5c6cb;
+}
+
+.message.info {
+    background-color: #d1ecf1;
+    color: #0c5460;
+    border-color: #bee5eb;
+} 

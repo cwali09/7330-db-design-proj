@@ -92,9 +92,15 @@ const getPostsByUser = (socialMediaName, username) => {
     });
 };
 
-// --- NEW: Function to get simple post list ---
+// --- Function to get simple post list ---
 const getAllPostsList = () => {
     return apiClient.get('/posts/list');
+};
+
+// --- NEW: Function to find experiments by post IDs ---
+const findExperimentsByPosts = (postIds) => {
+    // Use POST request as defined in the backend
+    return apiClient.post('/experiments/by-posts', { postIds });
 };
 // --- End NEW Function ---
 
@@ -112,6 +118,7 @@ const apiService = {
   queryExperiment,
   getPostsByUser,
   getAllPostsList,
+  findExperimentsByPosts
 };
 
 export default apiService; 

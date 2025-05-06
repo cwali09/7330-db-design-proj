@@ -7,6 +7,7 @@ import HomePage from './pages/HomePage';
 import DataEntryPage from './pages/DataEntryPage';
 import QueryPostsPage from './pages/QueryPostsPage';
 import QueryExperimentPage from './pages/QueryExperimentPage';
+import QueryPostsThenExperimentsPage from './pages/QueryPostsThenExperimentsPage';
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
             <li><Link to="/data-entry">Data Entry</Link></li>
             <li><Link to="/query-posts">Query Posts</Link></li>
             <li><Link to="/query-experiment">Query Experiment</Link></li>
+            <li><Link to="/query-posts-then-experiments">Posts &rarr; Experiments</Link></li>
           </ul>
         </nav>
 
@@ -28,6 +30,7 @@ function App() {
             <Route path="/data-entry" element={<DataEntryPage />} />
             <Route path="/query-posts" element={<QueryPostsPage />} />
             <Route path="/query-experiment" element={<QueryExperimentPage />} />
+            <Route path="/query-posts-then-experiments" element={<QueryPostsThenExperimentsPage />} />
             {/* Add more specific routes or nested routes as needed */}
           </Routes>
         </main>

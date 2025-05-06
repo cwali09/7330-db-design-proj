@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db'); // Import the database pool
 const { v4: uuidv4 } = require('uuid'); // Using UUID for manager IDs for simplicity
+const { getExperimentDetails } = require('../utils/experimentQueries'); // Import the refactored function
 
 // --- Data Entry Routes ---
 
@@ -246,14 +247,15 @@ router.post('/:projectName/posts', async (req, res, next) => {
 // GET /api/projects/:projectName/experiment - Query experiment data
 router.get('/:projectName/experiment', async (req, res, next) => {
     const { projectName } = req.params;
+    const decodedProjectName = decodeURIComponent(projectName);
     let connection;
 
     try {
         connection = await db.getConnection();
-        console.log(`Calling QueryExperiment procedure for project: ${projectName}`);
+        console.log(`Calling QueryExperiment procedure for project: ${decodedProjectName}`);
 
         const procedureCall = 'CALL QueryExperiment(?)';
-        const params = [projectName];
+        const params = [decodedProjectName];
 
         // Execute the stored procedure which returns multiple result sets
         const [results] = await connection.query(procedureCall, params);
@@ -265,9 +267,9 @@ router.get('/:projectName/experiment', async (req, res, next) => {
         // Check if the first result set is empty AND the second is empty.
         // This indicates our procedure signaled "Project not found".
         if (results[0].length === 0 && results[1].length === 0) {
-             console.log(`Project not found: ${projectName}`);
+             console.log(`Project not found: ${decodedProjectName}`);
              // Send a 404 Not Found status
-             return res.status(404).json({ message: `Project '${projectName}' not found.` });
+             return res.status(404).json({ message: `Project '${decodedProjectName}' not found.` });
         }
 
         const postsData = results[0];
@@ -281,7 +283,7 @@ router.get('/:projectName/experiment', async (req, res, next) => {
         });
 
     } catch (err) {
-        console.error(`Error calling QueryExperiment procedure for project ${projectName}:`, err);
+        console.error(`Error calling QueryExperiment procedure for project ${decodedProjectName}:`, err);
         // Check if the error indicates the procedure doesn't exist or has wrong parameters
         if (err.code === 'ER_SP_DOES_NOT_EXIST') {
              return res.status(500).json({ message: "Stored procedure 'QueryExperiment' not found." });

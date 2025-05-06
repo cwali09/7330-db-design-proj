@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
+const { getExperimentDetails } = require('../utils/experimentQueries'); // Import the reusable function
 
 // --- Querying Routes ---
 
@@ -58,6 +59,75 @@ router.get('/:projectName', async (req, res, next) => {
     console.error(`Error querying experiment ${projectName}:`, err);
     next(err);
   }
+});
+
+// POST /api/experiments/by-posts - Find experiments associated with given post IDs
+router.post('/by-posts', async (req, res, next) => {
+    const { postIds } = req.body;
+
+    // --- Validation ---
+    if (!Array.isArray(postIds) || postIds.length === 0) {
+        return res.status(400).json({ message: 'postIds must be a non-empty array.' });
+    }
+    const validPostIds = postIds.map(id => parseInt(id, 10)).filter(id => !isNaN(id) && id > 0);
+    if (validPostIds.length !== postIds.length || validPostIds.length === 0) {
+        return res.status(400).json({ message: 'Invalid or empty post ID(s) provided. Must be positive integers.' });
+    }
+
+    let connection;
+    try {
+        connection = await db.getConnection();
+
+        // 1. Find distinct project names associated with any of the post IDs
+        const placeholders = validPostIds.map(() => '?').join(',');
+        const [projectLinks] = await connection.query(
+            `SELECT DISTINCT project_name FROM PROJECT_POST WHERE post_id IN (${placeholders})`,
+            validPostIds
+        );
+
+        const projectNames = projectLinks.map(link => link.project_name);
+
+        if (projectNames.length === 0) {
+            return res.status(200).json({ // Not an error, just no associated experiments found
+                message: 'No experiments found associated with the provided post IDs.',
+                experiments: []
+            });
+        }
+
+        // 2. For each project name, fetch its full experiment details using the refactored function
+        const experimentsData = [];
+        // Use Promise.all to fetch details concurrently
+        await Promise.all(projectNames.map(async (projectName) => {
+            try {
+                // Need a separate connection for each concurrent request OR manage transactions carefully
+                // Simpler approach for now: fetch sequentially or handle connection pool limits
+                // Let's fetch sequentially within the single connection for simplicity here.
+                // For high concurrency, consider fetching connections from the pool for each call.
+                const details = await getExperimentDetails(projectName, connection);
+                if (details) {
+                    experimentsData.push(details);
+                } else {
+                    // Log if a project linked in PROJECT_POST wasn't found (data inconsistency?)
+                    console.warn(`Project '${projectName}' linked to posts ${validPostIds.join(',')} but not found during detail fetch.`);
+                }
+            } catch (err) {
+                console.error(`Error fetching details for project ${projectName} in /by-posts route:`, err);
+                // Decide whether to fail the whole request or just skip this project
+                // Let's skip and continue for now
+            }
+        }));
+
+        res.status(200).json({
+            message: `Found ${experimentsData.length} experiment(s) associated with the provided post IDs.`,
+            experiments: experimentsData // Array of experiment detail objects
+        });
+
+    } catch (err) {
+        console.error('Error in /experiments/by-posts route:', err);
+        next(err);
+    } finally {
+        if (connection) connection.release();
+    }
 });
 
 module.exports = router; 
