@@ -49,6 +49,14 @@ function DataEntryPage() {
     social_media_name: '',
     username: '',
     content: '',
+    post_time: '',
+    // Add new fields based on schema
+    city: '',
+    state: '',
+    country: '',
+    likes: 0, // Default to 0
+    dislikes: 0, // Default to 0
+    has_multimedia: false, // Default to false
   });
   // Re-use socialMediaPlatforms state for post dropdown
 
@@ -176,8 +184,11 @@ function DataEntryPage() {
   };
 
   const handlePostChange = (e) => {
-    const { name, value } = e.target;
-    setPostData(prev => ({ ...prev, [name]: value }));
+    const { name, value, type, checked } = e.target;
+    setPostData(prevData => ({
+      ...prevData,
+      [name]: type === 'checkbox' ? checked : value,
+    }));
   };
 
   const handleAssociationChange = (e) => {
@@ -323,7 +334,7 @@ function DataEntryPage() {
       const response = await apiService.createPost(postData);
       showMessage(`Post (ID: ${response.data.data.post_id}) created successfully!`, 'success');
       // Clear form
-      setPostData({ social_media_name: '', username: '', content: '' });
+      setPostData({ social_media_name: '', username: '', content: '', post_time: '', city: '', state: '', country: '', likes: 0, dislikes: 0, has_multimedia: false });
     } catch (error) {
       console.error("Error creating post:", error);
       showMessage(`Error creating post: ${error.response?.data?.message || error.message}`, 'error');
@@ -644,6 +655,40 @@ function DataEntryPage() {
                <label htmlFor="content">Content:</label>
                <textarea id="content" name="content" value={postData.content} onChange={handlePostChange}></textarea>
              </div>
+
+             {/* --- Add City, State, Country --- */}
+             <div className="form-group">
+               <label htmlFor="city">City (Optional):</label>
+               <input type="text" id="city" name="city" value={postData.city} onChange={handlePostChange} maxLength="50" />
+             </div>
+             <div className="form-group">
+               <label htmlFor="state">State (Optional):</label>
+               <input type="text" id="state" name="state" value={postData.state} onChange={handlePostChange} maxLength="50" />
+             </div>
+             <div className="form-group">
+               <label htmlFor="country">Country (Optional):</label>
+               <input type="text" id="country" name="country" value={postData.country} onChange={handlePostChange} maxLength="50" />
+             </div>
+             {/* --- End City, State, Country --- */}
+
+             {/* --- Add Likes, Dislikes --- */}
+             <div className="form-group">
+               <label htmlFor="likes">Likes (Optional):</label>
+               <input type="number" id="likes" name="likes" value={postData.likes} onChange={handlePostChange} />
+             </div>
+             <div className="form-group">
+               <label htmlFor="dislikes">Dislikes (Optional):</label>
+               <input type="number" id="dislikes" name="dislikes" value={postData.dislikes} onChange={handlePostChange} />
+             </div>
+             {/* --- End Likes, Dislikes --- */}
+
+             {/* --- Add Has Multimedia --- */}
+             <div className="form-group form-group-inline">
+               <input type="checkbox" id="has_multimedia" name="has_multimedia" checked={postData.has_multimedia} onChange={handlePostChange} />
+               <label htmlFor="has_multimedia">Has Multimedia</label>
+             </div>
+             {/* --- End Has Multimedia --- */}
+
              <button type="submit">Create Post</button>
           </form>
         )}
