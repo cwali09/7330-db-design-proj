@@ -481,29 +481,29 @@ function DataEntryPage() {
             <h2>1. Create New Project</h2>
              <div className="form-group">
                <label htmlFor="name">Project Name:</label>
-               <input type="text" id="name" name="name" value={newProjectData.name} onChange={handleNewProjectChange} maxLength="100" required />
+               <input type="text" id="name" name="name" value={newProjectData.name} onChange={handleNewProjectChange} maxLength="100" />
              </div>
              <div className="form-group">
                <label htmlFor="start_date">Start Date:</label>
-               <input type="date" id="start_date" name="start_date" value={newProjectData.start_date} onChange={handleNewProjectChange} required />
+               <input type="date" id="start_date" name="start_date" value={newProjectData.start_date} onChange={handleNewProjectChange} />
              </div>
              <div className="form-group">
                <label htmlFor="end_date">End Date:</label>
-               <input type="date" id="end_date" name="end_date" value={newProjectData.end_date} onChange={handleNewProjectChange} required />
+               <input type="date" id="end_date" name="end_date" value={newProjectData.end_date} onChange={handleNewProjectChange} />
              </div>
              <div className="form-group">
                <label htmlFor="institute_name">Institute Name:</label>
                {/* TODO: Replace with dropdown fetched from INSTITUTE table */}
-               <input type="text" id="institute_name" name="institute_name" value={newProjectData.institute_name} onChange={handleNewProjectChange} maxLength="100" required />
+               <input type="text" id="institute_name" name="institute_name" value={newProjectData.institute_name} onChange={handleNewProjectChange} maxLength="100" />
              </div>
              <div className="form-group">
                <label htmlFor="manager_first_name">Manager First Name:</label>
                {/* TODO: Replace with dropdown fetched from PROJECT_MANAGER table */}
-               <input type="text" id="manager_first_name" name="manager_first_name" value={newProjectData.manager_first_name} onChange={handleNewProjectChange} maxLength="50" required />
+               <input type="text" id="manager_first_name" name="manager_first_name" value={newProjectData.manager_first_name} onChange={handleNewProjectChange} maxLength="50" />
              </div>
              <div className="form-group">
                <label htmlFor="manager_last_name">Manager Last Name:</label>
-               <input type="text" id="manager_last_name" name="manager_last_name" value={newProjectData.manager_last_name} onChange={handleNewProjectChange} maxLength="50" required />
+               <input type="text" id="manager_last_name" name="manager_last_name" value={newProjectData.manager_last_name} onChange={handleNewProjectChange} maxLength="50" />
              </div>
              <button type="submit">Create Project</button>
           </form>
@@ -515,7 +515,7 @@ function DataEntryPage() {
              <div className="form-group">
                <label htmlFor="fieldProjectName">Project Name:</label>
                {/* TODO: Replace with dropdown fetched from PROJECT table */}
-               <input type="text" id="fieldProjectName" name="fieldProjectName" value={fieldProjectName} onChange={handleFieldProjectNameChange} maxLength="100" required />
+               <input type="text" id="fieldProjectName" name="fieldProjectName" value={fieldProjectName} onChange={handleFieldProjectNameChange} maxLength="100" />
              </div>
 
              <fieldset>
@@ -531,7 +531,6 @@ function DataEntryPage() {
                                 value={field.field_name}
                                 onChange={(e) => handleNewFieldChange(e, index)}
                                 maxLength="50"
-                                required
                             />
                         </div>
                         <div className="form-group">
@@ -570,7 +569,7 @@ function DataEntryPage() {
             <h2>3. Create New Social Media Platform</h2>
              <div className="form-group">
                <label htmlFor="platformName">Platform Name:</label>
-               <input type="text" id="platformName" value={platformName} onChange={handlePlatformNameChange} maxLength="50" required />
+               <input type="text" id="platformName" value={platformName} onChange={handlePlatformNameChange} maxLength="50" />
              </div>
              <button type="submit">Create Platform</button>
           </form>
@@ -581,7 +580,7 @@ function DataEntryPage() {
             <h2>4. Create New User Account</h2>
              <div className="form-group">
                <label htmlFor="userSocialMedia">Social Media Platform:</label>
-               <select id="userSocialMedia" name="social_media_name" value={userData.social_media_name} onChange={handleUserChange} required>
+               <select id="userSocialMedia" name="social_media_name" value={userData.social_media_name} onChange={handleUserChange}>
                  <option value="">-- Select Platform --</option>
                  {socialMediaPlatforms.map(platform => (
                    <option key={platform.name} value={platform.name}>{platform.name}</option>
@@ -590,7 +589,7 @@ function DataEntryPage() {
              </div>
              <div className="form-group">
                <label htmlFor="username">Username:</label>
-               <input type="text" id="username" name="username" value={userData.username} onChange={handleUserChange} maxLength="40" required />
+               <input type="text" id="username" name="username" value={userData.username} onChange={handleUserChange} maxLength="40" />
              </div>
              <div className="form-group">
                <label htmlFor="first_name">First Name (Optional):</label>
@@ -629,7 +628,7 @@ function DataEntryPage() {
             <h2>5. Create New Post</h2>
              <div className="form-group">
                <label htmlFor="postSocialMedia">Social Media Platform:</label>
-               <select id="postSocialMedia" name="social_media_name" value={postData.social_media_name} onChange={handlePostChange} required>
+               <select id="postSocialMedia" name="social_media_name" value={postData.social_media_name} onChange={handlePostChange}>
                  <option value="">-- Select Platform --</option>
                  {socialMediaPlatforms.map(platform => (
                    <option key={platform.name} value={platform.name}>{platform.name}</option>
@@ -639,11 +638,11 @@ function DataEntryPage() {
              <div className="form-group">
                <label htmlFor="postUsername">Username:</label>
                {/* TODO: Ideally, fetch/validate username exists for the selected platform */}
-               <input type="text" id="postUsername" name="username" value={postData.username} onChange={handlePostChange} maxLength="40" required />
+               <input type="text" id="postUsername" name="username" value={postData.username} onChange={handlePostChange} maxLength="40" />
              </div>
              <div className="form-group">
                <label htmlFor="content">Content:</label>
-               <textarea id="content" name="content" value={postData.content} onChange={handlePostChange} required></textarea>
+               <textarea id="content" name="content" value={postData.content} onChange={handlePostChange}></textarea>
              </div>
              <button type="submit">Create Post</button>
           </form>
@@ -655,7 +654,7 @@ function DataEntryPage() {
              <div className="form-group">
                <label htmlFor="assocProjectName">Project Name:</label>
                {/* TODO: Replace with dropdown fetched from PROJECT table */}
-               <input type="text" id="assocProjectName" name="projectName" value={associationData.projectName} onChange={handleAssociationChange} maxLength="100" required />
+               <input type="text" id="assocProjectName" name="projectName" value={associationData.projectName} onChange={handleAssociationChange} maxLength="100" />
              </div>
              {/* --- NEW Dropdown Section --- */}
              <div className="form-group">
@@ -668,7 +667,6 @@ function DataEntryPage() {
                    multiple // Enable multi-selection
                    value={selectedPostIdsForAssociation} // Bind to state holding selected IDs
                    onChange={handleSelectedPostsChange} // Use the specific handler
-                   required
                    size="10" // Show multiple items at once
                    style={{ minWidth: '300px', height: '150px' }} // Basic styling
                  >
@@ -681,7 +679,6 @@ function DataEntryPage() {
                ) : (
                  <p>No posts available to associate, or failed to load.</p>
                )}
-                <small>Hold Ctrl (or Cmd on Mac) to select multiple posts.</small>
              </div>
              {/* --- End NEW Dropdown Section --- */}
              <button type="submit" disabled={loadingPosts}>Associate Selected Posts</button>
@@ -695,7 +692,7 @@ function DataEntryPage() {
               <div className="form-group">
                <label htmlFor="resultProjectName">Project Name:</label>
                {/* TODO: Replace with a select dropdown populated by fetched projects */}
-               <input type="text" id="resultProjectName" value={resultProjectName} onChange={(e) => setResultProjectName(e.target.value)} required />
+               <input type="text" id="resultProjectName" value={resultProjectName} onChange={(e) => setResultProjectName(e.target.value)} />
              </div>
 
              {/* User Account Selection */}
@@ -703,7 +700,7 @@ function DataEntryPage() {
                 <legend>Find Post by User Account</legend>
                  <div className="form-group">
                    <label htmlFor="resultSocialMedia">Social Media Platform:</label>
-                   <select id="resultSocialMedia" value={resultSocialMedia} onChange={handleResultSocialMediaChange} required>
+                   <select id="resultSocialMedia" value={resultSocialMedia} onChange={handleResultSocialMediaChange}>
                      <option value="">-- Select Platform --</option>
                      {socialMediaPlatforms.map(platform => (
                        <option key={platform.name} value={platform.name}>{platform.name}</option>
@@ -712,7 +709,7 @@ function DataEntryPage() {
                  </div>
                  <div className="form-group">
                    <label htmlFor="resultUsername">Username:</label>
-                   <input type="text" id="resultUsername" value={resultUsername} onChange={handleResultUsernameChange} maxLength="40" required />
+                   <input type="text" id="resultUsername" value={resultUsername} onChange={handleResultUsernameChange} maxLength="40" />
                  </div>
                  <button type="button" onClick={handleFindUserPosts} disabled={fetchingUserPosts || !resultSocialMedia || !resultUsername.trim()}>
                     {fetchingUserPosts ? 'Finding...' : 'Find Posts'}
@@ -724,7 +721,7 @@ function DataEntryPage() {
              {userPosts.length > 0 && (
                  <div className="form-group">
                    <label htmlFor="selectedPostId">Select Post:</label>
-                   <select id="selectedPostId" value={selectedPostId} onChange={handleSelectedPostChange} required>
+                   <select id="selectedPostId" value={selectedPostId} onChange={handleSelectedPostChange}>
                      <option value="">-- Select a Post --</option>
                      {userPosts.map(post => (
                        <option key={post.post_id} value={post.post_id}>
@@ -739,11 +736,11 @@ function DataEntryPage() {
               <div className="form-group">
                <label htmlFor="fieldName">Field Name:</label>
                {/* TODO: Replace with a select dropdown populated by fetched fields (maybe filtered by project) */}
-               <input type="text" id="fieldName" name="fieldName" value={resultFieldName} onChange={(e) => setResultFieldName(e.target.value)} maxLength="50" required />
+               <input type="text" id="fieldName" name="fieldName" value={resultFieldName} onChange={(e) => setResultFieldName(e.target.value)} maxLength="50" />
              </div>
               <div className="form-group">
                <label htmlFor="value">Value:</label>
-               <input type="text" id="value" name="value" value={resultValue} onChange={(e) => setResultValue(e.target.value)} maxLength="255" required />
+               <input type="text" id="value" name="value" value={resultValue} onChange={(e) => setResultValue(e.target.value)} maxLength="255" />
              </div>
               <button type="submit" disabled={!selectedPostId}>Add Result</button> {/* Disable submit until a post is selected */}
            </form>
