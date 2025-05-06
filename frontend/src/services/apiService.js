@@ -92,6 +92,12 @@ const getPostsByUser = (socialMediaName, username) => {
     });
 };
 
+// --- NEW: Function to get simple post list ---
+const getAllPostsList = () => {
+    return apiClient.get('/posts/list');
+};
+// --- End NEW Function ---
+
 // Export functions
 const apiService = {
   createProject,
@@ -105,6 +111,7 @@ const apiService = {
   queryPosts,
   queryExperiment,
   getPostsByUser,
+  getAllPostsList,
 };
 
 export default apiService; 

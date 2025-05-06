@@ -199,6 +199,30 @@ router.get('/by-user', async (req, res, next) => {
     }
 });
 
+// GET /api/posts/list - Get a simple list of all posts for dropdowns
+router.get('/list', async (req, res, next) => {
+    let connection;
+    try {
+        connection = await db.getConnection();
+        // Select ID and create a display text (e.g., "ID: 123 | User: abc | Content snippet")
+        // Limit content length for brevity
+        const [posts] = await connection.query(`
+            SELECT
+                post_id,
+                CONCAT('ID: ', post_id, ' | User: ', username, ' | ', LEFT(content, 50), IF(LENGTH(content) > 50, '...', '')) AS displayText
+            FROM POST
+            ORDER BY post_id DESC
+        `);
+        res.status(200).json(posts);
+    } catch (err) {
+        // --- CHECK BACKEND LOGS FOR THIS ERROR ---
+        console.error("Error fetching post list:", err);
+        next(err); // This might result in a 500 Internal Server Error response
+    } finally {
+        if (connection) connection.release();
+    }
+});
+
 // TODO: Add routes for entering new posts/users if needed, although
 // the instructions focus on analyzing existing posts within projects.
 

@@ -69,6 +69,11 @@ function DataEntryPage() {
   const [resultFieldName, setResultFieldName] = useState('');
   const [resultValue, setResultValue] = useState('');
 
+  // --- State for available posts list and selection
+  const [availablePosts, setAvailablePosts] = useState([]); // To store { post_id, displayText }
+  const [selectedPostIdsForAssociation, setSelectedPostIdsForAssociation] = useState([]); // Store selected IDs
+  const [loadingPosts, setLoadingPosts] = useState(false); // Loading indicator for posts dropdown
+
   // --- Fetch Social Media Platforms on Mount ---
   useEffect(() => {
     const fetchPlatforms = async () => {
@@ -82,6 +87,29 @@ function DataEntryPage() {
     };
     fetchPlatforms();
   }, []);
+
+  // --- Fetch Available Posts for Dropdown ---
+  useEffect(() => {
+    // Fetch posts only when the 'Associate Posts' tab is potentially active or component mounts
+    // You might refine this condition based on your exact tab switching logic
+    // For simplicity, fetch on mount. Could also fetch when assocProjectName changes.
+    const fetchPosts = async () => {
+      setLoadingPosts(true);
+      try {
+        const response = await apiService.getAllPostsList();
+        setAvailablePosts(response.data || []); // Ensure it's an array
+      } catch (error) {
+        // --- CHECK BROWSER CONSOLE FOR THIS ERROR ---
+        console.error("Error fetching available posts:", error);
+        showMessage('Failed to load posts list for dropdown.', 'error');
+        setAvailablePosts([]); // Clear on error
+      } finally {
+        setLoadingPosts(false);
+      }
+    };
+
+    fetchPosts();
+  }, []); // Empty dependency array means fetch once on mount
 
   // --- Helper to display messages ---
   const showMessage = (text, type = 'success') => {
@@ -174,6 +202,13 @@ function DataEntryPage() {
 
   const handleSelectedPostChange = (e) => {
       setSelectedPostId(e.target.value);
+  };
+
+  // Handler for multi-select dropdown
+  const handleSelectedPostsChange = (e) => {
+      const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
+      // Ensure values are integers
+      setSelectedPostIdsForAssociation(selectedOptions.map(id => parseInt(id, 10)));
   };
 
   // --- Async Handlers for API Calls ---
@@ -382,6 +417,39 @@ function DataEntryPage() {
     }
   };
 
+  // --- Handler for Associating Posts ---
+  const handleAssociatePostsSubmit = async (e) => {
+    e.preventDefault();
+    showMessage('', ''); // Clear previous messages
+
+    // Validate project name and selected posts
+    if (!associationData.projectName.trim()) {
+      showMessage('Project Name is required.', 'error');
+      return;
+    }
+    if (selectedPostIdsForAssociation.length === 0) {
+      showMessage('Please select at least one post to associate.', 'error');
+      return;
+    }
+
+    try {
+      // --- FIX: Use the correct function name 'associatePosts' ---
+      const response = await apiService.associatePosts(
+        associationData.projectName,
+        selectedPostIdsForAssociation // Send the array of numbers
+      );
+      // --- End FIX ---
+
+      showMessage(response.data.message || 'Posts associated successfully!', 'success');
+      // Clear selection after successful association
+      setSelectedPostIdsForAssociation([]);
+      // Optionally clear project name too, or keep it for associating more posts
+      // setAssociationData(prev => ({ ...prev, projectName: '' }));
+    } catch (error) {
+      console.error("Error associating posts:", error); // Error is caught here
+      showMessage(`Error associating posts: ${error.response?.data?.message || error.message}`, 'error');
+    }
+  };
 
   return (
     <div className="data-entry-container">
@@ -582,18 +650,41 @@ function DataEntryPage() {
         )}
 
         {activeTab === 'associatePosts' && (
-          <form onSubmit={handleAssociationSubmit} className="data-entry-form">
+          <form onSubmit={handleAssociatePostsSubmit} className="data-entry-form">
             <h2>6. Associate Posts with Project</h2>
              <div className="form-group">
                <label htmlFor="assocProjectName">Project Name:</label>
                {/* TODO: Replace with dropdown fetched from PROJECT table */}
                <input type="text" id="assocProjectName" name="projectName" value={associationData.projectName} onChange={handleAssociationChange} maxLength="100" required />
              </div>
+             {/* --- NEW Dropdown Section --- */}
              <div className="form-group">
-               <label htmlFor="postIds">Post IDs (comma-separated):</label>
-               <input type="text" id="postIds" name="postIds" value={associationData.postIds} onChange={handleAssociationChange} required placeholder="e.g., 1, 5, 12" />
+               <label htmlFor="postsToAssociate">Select Posts to Associate:</label>
+               {loadingPosts ? (
+                 <p>Loading posts...</p>
+               ) : availablePosts.length > 0 ? (
+                 <select
+                   id="postsToAssociate"
+                   multiple // Enable multi-selection
+                   value={selectedPostIdsForAssociation} // Bind to state holding selected IDs
+                   onChange={handleSelectedPostsChange} // Use the specific handler
+                   required
+                   size="10" // Show multiple items at once
+                   style={{ minWidth: '300px', height: '150px' }} // Basic styling
+                 >
+                   {availablePosts.map(post => (
+                     <option key={post.post_id} value={post.post_id}>
+                       {post.displayText}
+                     </option>
+                   ))}
+                 </select>
+               ) : (
+                 <p>No posts available to associate, or failed to load.</p>
+               )}
+                <small>Hold Ctrl (or Cmd on Mac) to select multiple posts.</small>
              </div>
-             <button type="submit">Associate Posts</button>
+             {/* --- End NEW Dropdown Section --- */}
+             <button type="submit" disabled={loadingPosts}>Associate Selected Posts</button>
           </form>
         )}
 
