@@ -277,6 +277,10 @@ router.get('/:projectName/experiment', async (req, res, next) => {
 
         console.log(`QueryExperiment returned ${postsData.length} posts and ${statisticsData.length} field statistics.`);
 
+        // --- Add this log ---
+        console.log('Statistics data being sent to frontend:', JSON.stringify(statisticsData, null, 2));
+        // --- End log ---
+
         res.status(200).json({
             posts: postsData,
             statistics: statisticsData

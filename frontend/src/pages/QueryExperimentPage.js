@@ -58,6 +58,28 @@ function QueryExperimentPage() {
   };
   // --- End helper function ---
 
+  // --- Helper function to extract unique field statistics from postsData ---
+  const extractStatisticsFromPosts = (postsData) => {
+      if (!postsData || postsData.length === 0) {
+          return [];
+      }
+      const statsMap = new Map();
+      postsData.forEach(row => {
+          // Only process rows that have a field_name
+          if (row.field_name && !statsMap.has(row.field_name)) {
+              // Assume the required stats are present on each row from the first result set
+              statsMap.set(row.field_name, {
+                  field_name: row.field_name,
+                  // Use the names expected by the table rendering logic below
+                  // These names MUST match the actual column names returned by the QueryExperiment procedure in the first result set
+                  posts_with_result_count: row.field_completion_count, // Or whatever the procedure calls the count column
+                  field_completion_percentage: row.field_completion_percentage, // The percentage column
+                  total_project_posts: row.total_project_posts // The total posts column
+              });
+          }
+      });
+      return Array.from(statsMap.values());
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -96,10 +118,13 @@ function QueryExperimentPage() {
         setProcessedPosts(groupedPosts); // Store the grouped data
         // ---
 
-        setStatistics(statisticsData); // Store the aggregate statistics
+        // --- Extract statistics from postsData as requested ---
+        const extractedStats = extractStatisticsFromPosts(rawPostsData);
+        setStatistics(extractedStats);
+        // --- End statistics extraction ---
 
-        // Adjust messages based on the *processed* posts count
-        if (groupedPosts.length === 0 && statisticsData.length === 0) {
+        // Adjust messages based on the *processed* posts count and extracted stats
+        if (groupedPosts.length === 0 && extractedStats.length === 0) {
           setMessage(`Project '${projectName}' found, but it has no posts or analysis results.`);
         } else if (groupedPosts.length === 0) {
           // This case might be less likely now if postsData includes rows even without results,
@@ -194,9 +219,8 @@ function QueryExperimentPage() {
                   {statistics.map((stat, index) => (
                     <tr key={index}>
                       <td>{stat.field_name}</td>
-                      <td>{stat.posts_with_result_count}</td>
-                      {/* Ensure completion_percentage is treated as number before toFixed */}
-                      <td>{stat.completion_percentage != null ? Number(stat.completion_percentage).toFixed(2) : '0.00'}%</td>
+                      <td>{stat.posts_with_result_count ?? 'N/A'}</td>
+                      <td>{stat.field_completion_percentage != null ? Number(stat.field_completion_percentage).toFixed(2) : '0.00'}%</td>
                     </tr>
                   ))}
                 </tbody>
@@ -205,7 +229,7 @@ function QueryExperimentPage() {
           )}
           {/* Message if no aggregate stats but posts exist */}
           {statistics.length === 0 && processedPosts.length > 0 && (
-             <p><em>No aggregate analysis statistics found for this project.</em></p>
+             <p><em>No aggregate analysis statistics could be extracted from the post data.</em></p>
            )}
 
           {/* --- Posts Section (Uses 'processedPosts' state) --- */}
