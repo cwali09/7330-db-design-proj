@@ -31,7 +31,7 @@ router.post('/', async (req, res, next) => {
 
     // 1. Check/Insert Institute
     await connection.query(
-      'INSERT IGNORE INTO INSTITUTE (name) VALUES (?)',
+      'INSERT INTO INSTITUTE (name) VALUES (?)',
       [institute_name]
     );
 
@@ -201,7 +201,7 @@ router.post('/:projectName/posts', async (req, res, next) => {
 
     // 2. Prepare bulk insert for PROJECT_POST association
     // Schema: PROJECT_POST(project_name VARCHAR(100), post_id INT, PRIMARY KEY (project_name, post_id))
-    const associationSql = 'INSERT IGNORE INTO PROJECT_POST (project_name, post_id) VALUES ?';
+    const associationSql = 'INSERT INTO PROJECT_POST (project_name, post_id) VALUES ?';
     const associationValues = validPostIds.map(postId => [projectName, postId]);
 
     // Execute bulk insert

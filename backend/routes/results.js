@@ -71,7 +71,6 @@ router.post('/', async (req, res, next) => {
         const sql = `
             INSERT INTO ANALYSIS_RESULT (project_name, field_name, post_id, value)
             VALUES (?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE value = VALUES(value)
         `;
         // Use the actual compound key values directly
         const params = [projectName, fieldName, parsedPostId, value];
