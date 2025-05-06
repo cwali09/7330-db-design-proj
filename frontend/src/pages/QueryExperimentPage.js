@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import apiService from '../services/apiService';
 import './QueryExperimentPage.css'; // Create this CSS file
 
 function QueryExperimentPage() {
   const [projectName, setProjectName] = useState('');
-  const [experimentData, setExperimentData] = useState(null); // Will hold { posts: [], statistics: [] }
+  const [posts, setPosts] = useState([]);
+  const [statistics, setStatistics] = useState([]); // State to hold analysis results/statistics
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
 
@@ -20,24 +21,78 @@ function QueryExperimentPage() {
     }
     setLoading(true);
     setMessage('');
-    setExperimentData(null); // Clear previous results
+    setPosts([]); // Clear previous results
+    setStatistics([]); // Clear previous results
 
     try {
+      console.log(`Fetching experiment data for project: ${projectName}`);
       const response = await apiService.queryExperiment(projectName);
-      setExperimentData(response.data); // Store { posts: [...], statistics: [...] }
-      if (response.data?.posts?.length === 0) {
-        setMessage(`Project '${projectName}' found, but no posts are associated with it yet.`);
+      // Log the *entire* axios response object
+      console.log("Full Axios Response Object:", response);
+
+      // Access data via response.data
+      const responseData = response.data;
+      console.log("API Response Data:", responseData);
+
+      // Check if posts is an array. Be more flexible with statistics initially.
+      if (response && responseData && Array.isArray(responseData.posts)) {
+        const postsData = responseData.posts;
+        // Ensure statisticsData is treated as an array for the state
+        // Default to empty array [] if it's not an array as received from API
+        const statisticsData = Array.isArray(responseData.statistics) ? responseData.statistics : [];
+
+        // Add a warning if statistics was not an array, as it indicates a backend/DB issue
+        if (!Array.isArray(responseData.statistics)) {
+            console.warn(
+                "Backend API returned 'statistics' as type",
+                typeof responseData.statistics,
+                "instead of an array. Defaulting to []. Check 'QueryExperiment' procedure.",
+                responseData.statistics // Log the actual problematic value
+            );
+            // Optionally add to the user message:
+            // setMessage(prev => prev + " (Note: Statistics data format needed adjustment)");
+        }
+
+        setPosts(postsData);
+        setStatistics(statisticsData); // Store the (potentially defaulted) statistics array
+
+        // Adjust messages based on the actual data received
+        // Use statisticsData.length which will be 0 if it wasn't an array originally
+        if (postsData.length === 0 && statisticsData.length === 0) {
+          setMessage(`Project '${projectName}' found, but it has no posts or analysis results.`);
+        } else if (postsData.length === 0) {
+          setMessage(`Project '${projectName}' found, but it has no associated posts.`);
+        } else {
+          setMessage(`Successfully fetched data for project '${projectName}'.`);
+        }
+
       } else {
-         setMessage(''); // Clear message on success with data
+        // Handle cases where the structure inside response.data is unexpected (e.g., posts missing or not array)
+        console.error("Unexpected API response structure inside response.data:", responseData);
+        let specificError = "Received unexpected data format from the server.";
+        if (response && responseData) {
+            // Only check posts here, as we handle non-array statistics above
+            if (!Array.isArray(responseData.posts)) specificError += " ('posts' was not an array or missing)";
+        } else if (!response?.data) {
+             specificError += " (Response data is missing)";
+        }
+        setMessage(specificError);
+        setPosts([]);
+        setStatistics([]);
       }
-    } catch (error) {
-      console.error("Error querying experiment:", error);
-      setExperimentData(null); // Clear data on error
-      if (error.response?.status === 404) {
-        setMessage(error.response.data.message || `Project '${projectName}' not found.`);
+
+    } catch (err) {
+      console.error("Error fetching experiment data:", err);
+      // Check if the error response *itself* contains a message (common for backend errors)
+      const backendErrorMessage = err.response?.data?.message;
+
+      if (err.response && err.response.status === 404) {
+        setMessage(backendErrorMessage || `Project '${projectName}' not found.`); // Use backend message if available
       } else {
-        setMessage(`Error querying experiment: ${error.response?.data?.message || error.message}`);
+        setMessage(backendErrorMessage || err.message || 'Failed to fetch experiment data. Please try again.'); // Use backend message if available
       }
+      setPosts([]);
+      setStatistics([]);
     } finally {
       setLoading(false);
     }
@@ -74,17 +129,17 @@ function QueryExperimentPage() {
         </button>
       </form>
 
-      {message && <p className={`message ${message.startsWith('Error') ? 'error' : 'success'}`}>{message}</p>}
+      {message && <p className={`message ${message.includes('Failed') || message.includes('Error') || message.includes('not found') ? 'error' : 'success'}`}>{message}</p>}
 
       {loading && <p>Loading experiment data...</p>}
 
-      {experimentData && (
+      {posts.length > 0 && !loading && (
         <div className="results-container">
           {/* --- Statistics Section --- */}
-          {experimentData.statistics && experimentData.statistics.length > 0 && (
+          {statistics.length > 0 && (
             <div className="statistics-section">
               <h2>Field Completion Statistics</h2>
-              <p>Total Posts in Project: {experimentData.statistics[0]?.total_project_posts ?? 0}</p>
+              <p>Total Posts in Project: {statistics[0]?.total_project_posts ?? 'N/A'}</p>
               <table className="stats-table">
                 <thead>
                   <tr>
@@ -94,7 +149,7 @@ function QueryExperimentPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {experimentData.statistics.map((stat, index) => (
+                  {statistics.map((stat, index) => (
                     <tr key={index}>
                       <td>{stat.field_name}</td>
                       <td>{stat.posts_with_result_count}</td>
@@ -105,43 +160,71 @@ function QueryExperimentPage() {
               </table>
             </div>
           )}
-           {experimentData.statistics && experimentData.statistics.length === 0 && experimentData.posts?.length > 0 && (
+          {statistics.length === 0 && posts.length > 0 && (
              <p><em>No analysis fields defined or results entered for this project yet.</em></p>
            )}
 
-
           {/* --- Posts Section --- */}
-          {experimentData.posts && experimentData.posts.length > 0 && (
-            <div className="posts-section">
+          <div className="posts-section">
               <h2>Associated Posts</h2>
-              {experimentData.posts.map((post) => (
-                <div key={post.post_id} className="post-item">
-                  <div className="post-details">
-                    <p><strong>Post ID:</strong> {post.post_id}</p>
-                    <p><strong>Platform:</strong> {post.social_media_name}</p>
-                    <p><strong>Username:</strong> {post.username}</p>
-                    <p><strong>Time:</strong> {formatDateTime(post.post_time)}</p>
-                    <p><strong>Content:</strong></p>
-                    <pre className="post-content">{post.content}</pre>
+              {posts.map((post) => {
+                // Filter statistics array for the current post
+                // This relies on 'statistics' being an array in the state
+                const postResults = statistics.filter(stat =>
+                    // Ensure we are comparing the correct properties.
+                    // Assuming statistics array contains rows from ANALYSIS_RESULT joined with FIELD?
+                    // Or does the statistics array *only* contain the aggregate data?
+                    // *** Re-check what the 'statistics' array actually contains based on QueryExperiment procedure ***
+                    // If statistics ONLY contains aggregates (field_name, count, percentage),
+                    // then you CANNOT filter it per post like this.
+                    // You need a DIFFERENT array containing the *individual* results per post.
+                    // Let's assume QueryExperiment's first result set (postsData) contains nested results.
+                    // *** IF postsData contains nested results: ***
+                    // const postResults = post.results || []; // Assuming results are nested in post object
+
+                    // *** IF statisticsData *was supposed* to contain individual results: ***
+                     stat.post_id === post.post_id // This line assumes statistics has individual results with post_id
+                );
+
+                // Determine if results are nested within the post object itself
+                // (Check your QueryExperiment procedure's first result set structure)
+                const resultsToShow = post.results && Array.isArray(post.results) ? post.results : postResults;
+                const hasNestedResults = post.results && Array.isArray(post.results);
+
+                return (
+                  <div key={post.post_id} className="post-item">
+                    <div className="post-details">
+                        <p><strong>Post ID:</strong> {post.post_id}</p>
+                        <p><strong>User:</strong> {post.username} ({post.social_media_name})</p>
+                        <p><strong>Time:</strong> {formatDateTime(post.post_time)}</p>
+                        <p><strong>Content:</strong></p>
+                        <div className="post-content">{post.content || <em>No content</em>}</div>
+                    </div>
+                    <div className="post-results">
+                      <strong>Analysis Results:</strong>
+                      {resultsToShow.length > 0 ? (
+                        <ul>
+                          {resultsToShow.map((result, index) => (
+                            // Use a combination of keys for uniqueness if field_name can repeat per post
+                            <li key={`${result.field_name}-${index}`}>
+                              <strong>{result.field_name}:</strong> {result.value !== null && result.value !== undefined ? String(result.value) : <em>N/A</em>}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p><em>No analysis results found for this post.</em></p>
+                      )}
+                      {/* Add a note if we are relying on the potentially incorrect 'statistics' filtering */}
+                      {!hasNestedResults && postResults.length > 0 && (
+                          <p style={{fontSize: '0.8em', color: '#6c757d', marginTop: '5px'}}>
+                              (Results filtered from overall statistics - verify backend procedure if inaccurate)
+                          </p>
+                      )}
+                    </div>
                   </div>
-                  <div className="post-results">
-                    <strong>Analysis Results for this Project:</strong>
-                    {post.results && post.results.length > 0 ? (
-                      <ul>
-                        {post.results.map((result, idx) => (
-                          <li key={idx}>
-                            <strong>{result.fieldName}:</strong> {result.value}
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p><em>No results entered for this post in this project.</em></p>
-                    )}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
-          )}
         </div>
       )}
     </div>
