@@ -104,6 +104,20 @@ const findExperimentsByPosts = (postIds) => {
 };
 // --- End NEW Function ---
 
+// --- Institute Management ---
+const getInstitutes = () => apiClient.get('/institutes');
+const createInstitute = (instituteData) => apiClient.post('/institutes', instituteData); // If you add institute creation form
+
+// --- Manager Management ---
+const getManagers = () => apiClient.get('/managers');
+const createManager = (managerData) => apiClient.post('/managers', managerData); // If you add manager creation form
+
+// Modified: Accepts optional platform to filter users
+const getAllUsersList = (platform) => {
+    const params = platform ? { platform } : {};
+    return apiClient.get('/users', { params });
+};
+
 // Export functions
 const apiService = {
   createProject,
@@ -118,7 +132,12 @@ const apiService = {
   queryExperiment,
   getPostsByUser,
   getAllPostsList,
-  findExperimentsByPosts
+  findExperimentsByPosts,
+  getInstitutes,
+  createInstitute,
+  getManagers,
+  createManager,
+  getAllUsersList
 };
 
 export default apiService; 

@@ -128,8 +128,7 @@ router.post('/', async (req, res, next) => {
         const [newPostRows] = await connection.query(
             `SELECT
                 post_id, social_media_name, username, content, post_time,
-                city, state, country, likes, dislikes, has_multimedia,
-                content_hash, user_media_hash
+                city, state, country, likes, dislikes, has_multimedia
              FROM POST WHERE post_id = ?`,
             [newPostId]
         );
@@ -170,10 +169,6 @@ router.post('/', async (req, res, next) => {
         }
          if (err.code === 'ER_TRUNCATED_WRONG_VALUE_FOR_FIELD') {
              return res.status(400).json({ message: `Incorrect data type provided for a field: ${err.sqlMessage}` });
-         }
-         // Handle potential unique constraint violation on user_media_hash if it's active
-         if (err.code === 'ER_DUP_ENTRY' && err.message.includes('user_media_hash')) {
-             return res.status(409).json({ message: 'A post with the same user and social media platform already exists (based on hash).'});
          }
 
 

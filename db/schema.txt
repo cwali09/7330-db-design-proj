@@ -41,9 +41,13 @@ CREATE TABLE PROJECT_MANAGER (
     last_name VARCHAR(50) NOT NULL
 );
 
--- Stores institutes associated with projects.
+-- Stores research institutes.
+-- Changed: institute_id is now the PK, name is unique.
 CREATE TABLE INSTITUTE (
-    name VARCHAR(100) PRIMARY KEY -- Institute name is unique [cite: 42]
+    institute_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    CONSTRAINT check_institute_name CHECK (name != ''),
+    CONSTRAINT unique_institute_name UNIQUE (name)
 );
 
 -- Represents user accounts on specific social media platforms.
@@ -66,16 +70,19 @@ CREATE TABLE USER_ACCOUNT (
     CONSTRAINT check_age CHECK (age IS NULL OR age > 0)
 );
 
--- Stores project information.
+-- Stores projects. Each project is linked to an institute and a manager.
+-- Changed: institute_name FK to institute_id FK.
 CREATE TABLE PROJECT (
-    name VARCHAR(100) PRIMARY KEY, -- Project name is unique [cite: 42]
-    start_date DATE NOT NULL,
-    end_date DATE NOT NULL,
-    institute_name VARCHAR(100) NOT NULL,
-    manager_id VARCHAR(50) NOT NULL,
-    FOREIGN KEY (institute_name) REFERENCES INSTITUTE(name) ON UPDATE CASCADE,
-    FOREIGN KEY (manager_id) REFERENCES PROJECT_MANAGER(manager_id) ON UPDATE CASCADE,
-    CONSTRAINT check_project_dates CHECK (end_date >= start_date) -- [cite: 43]
+    name VARCHAR(100) PRIMARY KEY,
+    start_date DATE,
+    end_date DATE,
+    description TEXT,
+    institute_id INT,          -- Changed from institute_name VARCHAR(100)
+    manager_id VARCHAR(50),    -- Matches PROJECT_MANAGER.manager_id
+    FOREIGN KEY (institute_id) REFERENCES INSTITUTE(institute_id) ON DELETE SET NULL ON UPDATE CASCADE, -- Changed FK
+    FOREIGN KEY (manager_id) REFERENCES PROJECT_MANAGER(manager_id) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT check_project_name CHECK (name != ''),
+    CONSTRAINT check_project_dates CHECK (end_date IS NULL OR start_date IS NULL OR start_date <= end_date)
 );
 
 CREATE TABLE POST (
@@ -167,7 +174,7 @@ CREATE INDEX idx_post_time ON POST(post_time);
 CREATE INDEX idx_post_user ON POST(username, social_media_name);
 CREATE INDEX idx_post_location ON POST(country, state, city);
 CREATE INDEX idx_project_dates ON PROJECT(start_date, end_date);
-CREATE INDEX idx_project_institute ON PROJECT(institute_name);
+CREATE INDEX idx_project_institute ON PROJECT(institute_id);
 CREATE INDEX idx_project_manager ON PROJECT(manager_id);
 CREATE INDEX idx_repost_user ON REPOST(username, social_media_name);
 CREATE INDEX idx_field_project ON FIELD(project_name);
@@ -188,7 +195,7 @@ SELECT
     i.name AS institute_name,
     pm.first_name AS manager_first_name, pm.last_name AS manager_last_name
 FROM PROJECT p
-JOIN INSTITUTE i ON p.institute_name = i.name
+JOIN INSTITUTE i ON p.institute_id = i.institute_id
 JOIN PROJECT_MANAGER pm ON p.manager_id = pm.manager_id;
 
 CREATE VIEW ANALYSIS_RESULTS_DETAIL AS
